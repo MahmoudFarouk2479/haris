@@ -1,0 +1,31 @@
+# Haris web search — a local SearXNG metasearch engine.
+#
+#   docker compose -f search/compose.yaml up -d      (run.ps1 does this for you)
+#
+# Search engines see the query and the container's outgoing IP, but never your browser,
+# cookies, account or history. Results come back to Haris only.
+
+name: haris-search
+
+services:
+  searxng:
+    image: searxng/searxng:2026.10.7-6671d89be
+    environment:
+      SEARXNG_SECRET: "${SEARXNG_SECRET:?Haris passes this from the Windows credential vault}"
+      SEARXNG_BASE_URL: "http://127.0.0.1:10500/"
+    ports: ["127.0.0.1:10500:8080"]
+    volumes:
+      - ./settings.yml:/etc/searxng/settings.yml:ro
+      - searxng-cache:/var/cache/searxng
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETGID, SETUID, DAC_OVERRIDE]   # needed by the image's entrypoint to drop to its own user
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+    cpus: 1
+    restart: "no"           # Haris starts and stops this itself
+    logging:
+      driver: local
+      options: { max-size: "5m", max-file: "2" }
+
+volumes:
+  searxng-cache:

@@ -1,0 +1,794 @@
+import '@fontsource/orbitron/500.css';
+import '@fontsource/orbitron/700.css';
+import '@fontsource/rajdhani/500.css';
+import '@fontsource/rajdhani/600.css';
+import './styles.css';
+
+import { api, hasToken, streamChat, subscribeEvents } from './api.js';
+import { createReactor } from './reactor.js';
+import { SentenceSplitter, Voice } from './voice.js';
+import { takePhoto } from './camera.js';
+
+const $ = (id) => document.getElementById(id);
+const reactor = createReactor($('reactor'));
+
+const STATE_LABELS = {
+  idle: 'STANDBY', thinking: 'PROCESSING', speaking: 'RESPONDING', acting: 'EXECUTING',
+  waiting: 'AWAITING AUTHORISATION', error: 'FAULT', listening: 'LISTENING', transcribing: 'TRANSCRIBING',
+};
+const REACTOR_STATE = { acting: 'thinking', waiting: 'thinking', transcribing: 'thinking' };
+function setState(state) {
+  document.body.dataset.state = state;
+  $('state-label').textContent = STATE_LABELS[state];
+  reactor.setState(REACTOR_STATE[state] ?? state);
+}
+
+// ── Voice ──────────────────────────────────────────────────────────────────
+let settingsCache = null;
+const voice = new Voice({
+  onLevel: (rms) => reactor.pulse(Math.min(0.35, rms * 2.5)),
+  onWake: () => {
+    if (busy) return;
+    voice.chime();
+    talk({ auto: true });
+  },
+  onMicState: ({ open, recording, wake }) => {
+    $('mic-badge').hidden = !open;
+    $('mic-badge').classList.toggle('rec', recording);
+    $('mic-label').textContent = recording ? 'RECORDING' : wake ? 'MIC · WAKE WORD ONLY' : 'MIC';
+    $('mic').classList.toggle('active', recording);
+    if (!recording && document.body.dataset.state === 'listening') setState('transcribing');
+  },
+  onSpeaking: (on) => {
+    if (on) {
+      setState('speaking');
+      return;
+    }
+    if (!busy && document.body.dataset.state === 'speaking') setState('idle');
+    // Conversation mode: after answering a spoken request, listen a few seconds for a follow-up
+    // (no wake word needed). Silence ends it; the mic badge shows when it is listening.
+    if (!busy && lastInputWasVoice && settingsCache?.voiceFollowUp && !voice.recording) {
+      setTimeout(() => {
+        if (!busy && !voice.recording && !voice.speaking) talk({ auto: true, followUp: true });
+      }, 250);
+    }
+  },
+  onNeedsGesture: once(() => addMessage('notice', 'The browser is holding my voice back: click anywhere in this window once to enable it.')),
+  onSpeechError: once(() => addMessage('error', 'I could not speak: the speech engine did not answer. Check that Docker Desktop is running — the Voice panel shows each engine status.')),
+});
+
+function once(fn) {
+  let done = false;
+  return (...args) => {
+    if (!done) {
+      done = true;
+      fn(...args);
+    }
+  };
+}
+
+let lastInputWasVoice = false;
+
+/** One spoken request: listen, transcribe locally, then treat it like a typed message. */
+async function talk({ auto, followUp = false }) {
+  if (busy) return;
+  if (followUp) voice.chime();
+  setState('listening');
+  try {
+    const recorded = voice.record({ auto });
+    const text = await recorded;
+    if (!text) {
+      lastInputWasVoice = false;   // silence ends the conversation
+      setState('idle');
+      return;
+    }
+    lastInputWasVoice = true;
+    send(text);
+  } catch (e) {
+    addMessage('error', e.message || 'Voice input failed.');
+    setState('error');
+    setTimeout(() => setState('idle'), 2500);
+  }
+}
+
+$('mic').addEventListener('click', () => {
+  if (voice.recording) {
+    setState('transcribing');
+    voice.stopRecording();
+  } else {
+    talk({ auto: true });
+  }
+});
+
+// Push-to-talk: hold Ctrl+Space anywhere in the window.
+window.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.code === 'Space' && !e.repeat) {
+    e.preventDefault();
+    talk({ auto: false });
+  }
+});
+window.addEventListener('keyup', (e) => {
+  if (e.code === 'Space' && voice.recording && !voice.recording.auto) {
+    e.preventDefault();
+    setState('transcribing');
+    voice.stopRecording();
+  }
+});
+
+async function refreshVoiceStatus() {
+  try {
+    const s = await api('/api/voice/status');
+    const mark = (id, ok, extra = '') => {
+      $(id).textContent = ok ? `● Online${extra}` : '○ Offline';
+      $(id).classList.toggle('off', !ok);
+    };
+    if (s.sttRoute === 'colab') {
+      $('voice-stt').textContent = s.stt ? '● Colab GPU (local backup)' : '● Colab GPU';
+      $('voice-stt').classList.remove('off');
+    } else {
+      mark('voice-stt', s.stt);
+    }
+    mark('voice-tts', s.tts);
+    mark('voice-wake', s.wake && s.wakeWords.includes('hey_haris'), '');
+    if (s.wake && !s.wakeWords.includes('hey_haris')) $('voice-wake').textContent = '○ No "hey haris" model';
+  } catch {
+    /* ignore */
+  }
+}
+
+async function applyVoiceSettings(s) {
+  if (s.voiceWake && !voice.wakeEnabled) {
+    try {
+      await voice.enableWake();
+    } catch {
+      addMessage('error', 'Microphone access was refused, so the wake word is off.');
+    }
+  } else if (!s.voiceWake && voice.wakeEnabled) {
+    voice.disableWake();
+  }
+}
+
+// ── Boot sequence ──────────────────────────────────────────────────────────
+async function boot() {
+  const lines = [
+    'H.A.R.I.S. CORE v0.6',
+    'Binding to loopback 127.0.0.1 ............ OK',
+    'Inbound network interfaces ............... NONE',
+    'Session token ............................ VERIFIED',
+    'Credential vault ......................... SEALED',
+    'Permission gate .......................... ARMED',
+    'Holographic projector .................... ONLINE',
+  ];
+  const log = $('boot-log');
+  const fast = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  for (const line of lines) {
+    log.textContent += line + '\n';
+    await sleep(fast ? 20 : 150);
+  }
+  await sleep(fast ? 50 : 350);
+  $('boot').classList.add('done');
+  setTimeout(() => $('boot').remove(), 900);
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// ── Clock ──────────────────────────────────────────────────────────────────
+function tickClock() {
+  const now = new Date();
+  $('clock-time').textContent = now.toLocaleTimeString('en-GB', { hour12: false });
+  $('clock-date').textContent = now
+    .toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+    .toUpperCase();
+}
+
+// ── Telemetry ──────────────────────────────────────────────────────────────
+const cpuHistory = [];
+async function refreshSystem() {
+  try {
+    const s = await api('/api/system');
+    $('cpu-value').textContent = `${s.cpu.toFixed(1)}%`;
+    $('cpu-bar').style.width = `${Math.min(100, s.cpu)}%`;
+    const memPct = (s.memUsedGb / s.memTotalGb) * 100;
+    $('mem-value').textContent = `${s.memUsedGb} / ${s.memTotalGb} GB`;
+    $('mem-bar').style.width = `${memPct}%`;
+    $('cpu-name').textContent = shortCpu(s.cpuName);
+    $('cpu-name').title = s.cpuName;
+    $('cores').textContent = s.cores;
+    $('processes').textContent = s.processes;
+    $('uptime').textContent = formatUptime(s.uptimeSeconds);
+    $('power').textContent = s.battery < 0 ? 'AC' : `${s.battery}%${s.charging ? ' ⚡' : ''}`;
+    cpuHistory.push(s.cpu);
+    if (cpuHistory.length > 60) cpuHistory.shift();
+    drawSpark($('cpu-spark'), cpuHistory);
+  } catch {
+    /* core busy or restarting — try again on the next tick */
+  }
+}
+
+function shortCpu(name) {
+  return name.replace(/\(R\)|\(TM\)|CPU|Processor|@.*$/gi, '').replace(/\s+/g, ' ').trim();
+}
+
+function formatUptime(sec) {
+  const d = Math.floor(sec / 86400);
+  const h = Math.floor((sec % 86400) / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  return d ? `${d}d ${h}h ${m}m` : `${h}h ${m}m`;
+}
+
+function drawSpark(canvas, values) {
+  const g = canvas.getContext('2d');
+  const { width: w, height: h } = canvas;
+  const accent = getComputedStyle(document.body).getPropertyValue('--accent').trim();
+  g.clearRect(0, 0, w, h);
+  g.strokeStyle = accent;
+  g.globalAlpha = 0.25;
+  for (let y = 0; y <= h; y += h / 4) {
+    g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke();
+  }
+  g.globalAlpha = 1;
+  g.lineWidth = 1.5;
+  g.beginPath();
+  values.forEach((v, i) => {
+    const x = (i / 59) * w;
+    const y = h - (v / 100) * (h - 4) - 2;
+    i ? g.lineTo(x, y) : g.moveTo(x, y);
+  });
+  g.stroke();
+  g.lineTo(((values.length - 1) / 59) * w, h);
+  g.lineTo(0, h);
+  g.closePath();
+  g.globalAlpha = 0.12;
+  g.fillStyle = accent;
+  g.fill();
+  g.globalAlpha = 1;
+}
+
+// ── Activity & security ────────────────────────────────────────────────────
+const TOOL_LABELS = {
+  open_app: 'Open app', open_url: 'Browser', media_control: 'Media', power: 'Power',
+  list_folder: 'List folder', search_files: 'Search files', read_file: 'Read file', write_file: 'Write file',
+  create_folder: 'New folder', move_file: 'Move', delete_file: 'Recycle', clipboard_read: 'Clipboard',
+  clipboard_write: 'Clipboard', reminders: 'Reminders', weather: 'Weather', compose_message: 'Message draft',
+  system_status: 'System', list_apps: 'Apps', undo: 'Undo',
+  look_at_screen: 'Screen', look_through_camera: 'Camera',
+  web_search: 'Web search', fetch_page: 'Read page',
+  remember: 'Remember', recall: 'Recall', forget: 'Forget', memory: 'Memory', autostart: 'Autostart',
+};
+const DECISION_ICON = { auto: '◇', session: '◆', approved: '✓', 'approved (session)': '✓', denied: '✕', user: '↶' };
+
+async function refreshActivity() {
+  try {
+    const a = await api('/api/activity');
+    $('tools-count').textContent = `${a.tools} allow-listed`;
+    setContext(a.externalContent);
+    const list = $('activity');
+    list.replaceChildren();
+    for (const e of a.entries.slice(0, 6)) {
+      const li = document.createElement('li');
+      li.className = e.outcome === 'ok' ? 'ok' : e.decision === 'denied' ? 'denied' : 'err';
+      const icon = document.createElement('b');
+      icon.textContent = DECISION_ICON[e.decision] ?? '·';
+      const text = document.createElement('span');
+      text.textContent = e.summary;
+      text.title = `${e.tool} · ${e.risk} · ${e.decision} · ${e.outcome}\n${new Date(e.time).toLocaleString()}`;
+      li.append(icon, text);
+      list.append(li);
+    }
+    if (!a.entries.length) {
+      const li = document.createElement('li');
+      li.className = 'empty';
+      li.textContent = 'No actions yet';
+      list.append(li);
+    }
+    $('undo').disabled = !a.undo;
+    $('undo-label').textContent = a.undo ? `Next undo: ${a.undo}` : '';
+  } catch {
+    /* ignore */
+  }
+}
+
+function setContext(external) {
+  const el = $('context-state');
+  el.textContent = external ? 'External content' : 'Clean';
+  el.classList.toggle('warn', external);
+}
+
+$('undo').addEventListener('click', async () => {
+  const { message } = await api('/api/undo', { method: 'POST' });
+  addMessage('notice', message);
+  refreshActivity();
+});
+
+// ── Conversation ───────────────────────────────────────────────────────────
+const transcript = $('transcript');
+const input = $('input');
+let assistantName = 'Haris';
+let userName = '';
+let engineReady = false;
+let busy = false;
+
+function addMessage(role, text = '') {
+  const el = document.createElement('article');
+  el.className = `msg ${role}`;
+  const who = document.createElement('header');
+  who.textContent = { user: 'YOU', error: 'SYSTEM', notice: 'SYSTEM', reminder: 'REMINDER' }[role]
+    ?? assistantName.toUpperCase();
+  const body = document.createElement('div');
+  body.className = 'body';
+  body.dir = 'auto';
+  body.textContent = text;   // never innerHTML: model output and tool results are untrusted text
+  el.append(who, body);
+  transcript.append(el);
+  scrollDown();
+  return body;
+}
+
+const toolLines = new Map();
+function showTool({ id, tool, summary, status, detail }) {
+  let line = toolLines.get(id);
+  if (!line) {
+    line = document.createElement('div');
+    line.className = 'tool-line';
+    line.dir = 'auto';
+    transcript.append(line);
+    toolLines.set(id, line);
+  }
+  const icon = { running: '⟳', done: '✓', denied: '✕', error: '!' }[status] ?? '·';
+  line.dataset.status = status;
+  line.textContent = `${icon} ${(TOOL_LABELS[tool] ?? tool).toUpperCase()} · ${summary}${detail ? ' — ' + detail : ''}`;
+  scrollDown();
+}
+
+function scrollDown() {
+  transcript.scrollTop = transcript.scrollHeight;
+}
+
+/** Every picture shared with the model appears in the transcript, so there are no hidden looks. */
+function showPicture(src) {
+  if (!src.startsWith('data:image/jpeg;base64,')) return;
+  const fig = document.createElement('figure');
+  fig.className = 'shot';
+  const img = document.createElement('img');
+  img.src = src;
+  img.alt = 'Picture shared with the assistant';
+  const cap = document.createElement('figcaption');
+  cap.textContent = 'SHARED WITH THE MODEL';
+  fig.append(img, cap);
+  transcript.append(fig);
+  img.addEventListener('load', scrollDown);
+}
+
+function flash() {
+  const f = $('flash');
+  f.classList.remove('on');
+  void f.offsetWidth;
+  f.classList.add('on');
+}
+
+async function send(text, { label } = {}) {
+  if (busy || !text.trim()) return;
+  busy = true;
+  $('send').disabled = true;
+  addMessage('user', label ?? text);
+  setState('thinking');
+
+  let body = null;
+  const started = performance.now();
+  let firstAt = 0;
+  let chars = 0;
+  voice.stopSpeaking();
+  const speaker = settingsCache?.voiceReplies ? new SentenceSplitter((s) => voice.speak(s)) : null;
+  const bubble = () => {
+    if (!body) {
+      body = addMessage('assistant');
+      body.classList.add('streaming');
+    }
+    return body;
+  };
+  const closeBubble = () => {
+    if (body) {
+      body.classList.remove('streaming');
+      if (!body.textContent) body.closest('.msg').remove();
+    }
+    body = null;
+  };
+
+  await streamChat(text, {
+    meta: (m) => { $('engine').textContent = m.provider; },
+    delta: ({ text: delta }) => {
+      if (!firstAt) {
+        firstAt = performance.now();
+        $('latency').textContent = `${Math.round(firstAt - started)} ms`;
+      }
+      setState('speaking');
+      chars += delta.length;
+      bubble().textContent += delta;
+      speaker?.push(delta);
+      scrollDown();
+      reactor.pulse(Math.min(0.5, 0.08 + delta.length / 60));
+    },
+    tool: (t) => {
+      speaker?.flush();
+      closeBubble();
+      showTool(t);
+      setState(t.status === 'running' ? 'acting' : 'thinking');
+      if (t.status !== 'running') refreshActivity();
+    },
+    confirm: (request) => {
+      closeBubble();
+      setState('waiting');
+      askConfirmation(request);
+    },
+    notice: ({ message }) => {
+      closeBubble();
+      addMessage('notice', message);
+    },
+    security: ({ externalContent }) => setContext(externalContent),
+    image: ({ src }) => showPicture(src),
+    done: () => {
+      speaker?.flush();
+      const secs = (performance.now() - (firstAt || started)) / 1000;
+      $('throughput').textContent = chars && secs > 0 ? `${Math.round(chars / secs)} chars/s` : '—';
+      setState(voice.speaking ? 'speaking' : 'idle');
+    },
+    error: ({ message }) => {
+      closeBubble();
+      addMessage('error', message);
+      setState('error');
+      setTimeout(() => setState('idle'), 2500);
+    },
+  });
+
+  closeBubble();
+  closeConfirmation();
+  busy = false;
+  $('send').disabled = false;
+  refreshActivity();
+  input.focus();
+}
+
+$('composer').addEventListener('submit', (e) => {
+  e.preventDefault();
+  lastInputWasVoice = false;
+  const text = input.value;
+  input.value = '';
+  autosize();
+  send(text);
+});
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    $('composer').requestSubmit();
+  }
+});
+function autosize() {
+  input.style.height = 'auto';
+  input.style.height = `${Math.min(input.scrollHeight, 140)}px`;
+}
+input.addEventListener('input', autosize);
+
+$('reset').addEventListener('click', async () => {
+  await api('/api/chat/reset', { method: 'POST' });
+  transcript.replaceChildren();
+  toolLines.clear();
+  setContext(false);
+  addMessage('assistant', 'Memory of this conversation cleared, sir.');
+});
+
+// ── Authorisation card ─────────────────────────────────────────────────────
+// The only place an action can be approved. Buttons arm after a short delay so a stray
+// click or Enter press cannot approve something the user has not read; Deny has focus.
+const confirmDialog = $('confirm');
+let pending = null;
+let timer = null;
+const ARM_DELAY_MS = 700;
+const TIMEOUT_MS = 120_000;
+
+function askConfirmation(request) {
+  pending = request;
+  const risk = request.risk;
+  $('confirm-risk').textContent = risk === 'CRITICAL' ? 'CRITICAL' : 'CONFIRM';
+  confirmDialog.dataset.risk = risk;
+  $('confirm-tool').textContent = (TOOL_LABELS[request.tool] ?? request.tool).toUpperCase() + ` · ${request.tool}`;
+  $('confirm-summary').textContent = request.summary;
+  $('confirm-args').textContent = request.arguments;
+  $('confirm-warning').hidden = !request.externalContent;
+  const preview = request.preview?.startsWith('data:image/jpeg;base64,') ? request.preview : null;
+  $('confirm-preview-box').hidden = !preview;
+  $('confirm-preview').src = preview ?? '';
+  $('confirm-destination').textContent = request.destination ? `Result goes to: ${request.destination}` : '';
+  $('confirm-destination').classList.toggle('cloud', /internet/.test(request.destination ?? ''));
+  $('confirm-session').hidden = !request.sessionOption;
+
+  const armed = [$('confirm-once'), $('confirm-session')];
+  armed.forEach((b) => { b.disabled = true; });
+  setTimeout(() => armed.forEach((b) => { b.disabled = false; }), ARM_DELAY_MS);
+
+  const bar = $('confirm-timer-bar');
+  bar.style.transition = 'none';
+  bar.style.width = '100%';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    bar.style.transition = `width ${TIMEOUT_MS}ms linear`;
+    bar.style.width = '0%';
+  }));
+  clearTimeout(timer);
+  timer = setTimeout(() => decide('DENY'), TIMEOUT_MS);
+
+  confirmDialog.showModal();
+  $('confirm-deny').focus();
+}
+
+async function decide(decision) {
+  if (!pending) return;
+  const id = pending.id;
+  closeConfirmation();
+  setState('thinking');
+  try {
+    await api(`/api/confirm/${encodeURIComponent(id)}`, { method: 'POST', body: { decision } });
+  } catch {
+    /* already timed out on the core: it is treated as denied */
+  }
+}
+
+function closeConfirmation() {
+  pending = null;
+  clearTimeout(timer);
+  $('confirm-preview').src = '';   // drop the preview picture from the page
+  if (confirmDialog.open) confirmDialog.close();
+}
+
+$('confirm-deny').addEventListener('click', () => decide('DENY'));
+$('confirm-once').addEventListener('click', () => decide('ALLOW_ONCE'));
+$('confirm-session').addEventListener('click', () => decide('ALLOW_SESSION'));
+confirmDialog.addEventListener('cancel', (e) => {   // Esc = deny
+  e.preventDefault();
+  decide('DENY');
+});
+
+// ── Settings ───────────────────────────────────────────────────────────────
+const dialog = $('settings');
+const form = $('settings-form');
+const TEXT_FIELDS = [
+  'assistantName', 'userName', 'homeCity', 'provider', 'anthropicModel', 'anthropicEffort',
+  'ollamaBaseUrl', 'ollamaModel', 'lmStudioBaseUrl', 'lmStudioModel', 'openAiBaseUrl', 'openAiModel',
+  'sttLanguage', 'voiceEnglish', 'voiceArabic', 'colabBaseUrl', 'colabModel', 'replyLanguage',
+];
+const CHECK_FIELDS = ['webSearch', 'voiceReplies', 'voiceWake', 'voiceFollowUp', 'morningBriefing', 'startWithWindows', 'colabStt'];
+
+function fillSettings(view) {
+  const s = view.settings;
+  settingsCache = s;
+  engineReady = view.engineReady;
+  for (const f of TEXT_FIELDS) form.elements[f].value = s[f] ?? '';
+  for (const f of CHECK_FIELDS) form.elements[f].checked = Boolean(s[f]);
+  form.elements.allowedFolders.value = (s.allowedFolders ?? []).join('\n');
+  $('anthropic-key-state').textContent = view.secrets.anthropic ? '● Key stored in vault' : '○ No key stored';
+  $('openai-key-state').textContent = view.secrets['openai-compatible'] ? '● Key stored in vault' : '○ No key stored';
+  $('colab-key-state').textContent = view.secrets.colab
+    ? '● Token stored in vault — protected by the notebook proxy'
+    : '⚠ No token: if this address goes straight to Ollama, anyone who learns it can use, add or delete '
+      + 'models on your Colab. The notebook (proxy + token) is the protected way.';
+  $('colab-key-state').classList.toggle('warn-text', !view.secrets.colab);
+  applyIdentity(s);
+  showProviderFields();
+}
+
+function applyIdentity(s) {
+  assistantName = s.assistantName || 'Haris';
+  userName = s.userName || '';
+  $('assistant-name').textContent = assistantName.split('').join('.').toUpperCase() + '.';
+  document.title = assistantName;
+}
+
+function showProviderFields() {
+  const provider = form.elements.provider.value;
+  for (const block of form.querySelectorAll('.provider-fields')) {
+    block.hidden = block.dataset.provider !== provider;
+  }
+}
+form.elements.provider.addEventListener('change', showProviderFields);
+
+async function saveSettings() {
+  $('settings-error').textContent = '';
+  const body = Object.fromEntries(TEXT_FIELDS.map((f) => [f, form.elements[f].value.trim()]));
+  for (const f of CHECK_FIELDS) body[f] = form.elements[f].checked;
+  body.allowedFolders = form.elements.allowedFolders.value.split('\n').map((l) => l.trim()).filter(Boolean);
+  try {
+    let view = await api('/api/settings', { method: 'PUT', body });
+    const keys = [['anthropicKey', 'anthropic'], ['openAiKey', 'openai-compatible'], ['colabKey', 'colab']];
+    for (const [field, name] of keys) {
+      const value = form.elements[field].value.trim();
+      if (value) {
+        view = await api(`/api/secrets/${name}`, { method: 'PUT', body: { value } });
+        form.elements[field].value = '';
+      }
+    }
+    fillSettings(view);
+    applyVoiceSettings(view.settings);
+    transcript.replaceChildren();
+    toolLines.clear();
+    setContext(false);
+    addMessage('notice', 'Settings saved. A fresh conversation has started with the new rules.');
+    return true;
+  } catch (e) {
+    $('settings-error').textContent = e.message;
+    return false;
+  }
+}
+
+async function loadModels() {
+  const list = $('model-list');
+  list.replaceChildren();
+  try {
+    const res = await api('/api/models');
+    $('engine').textContent = res.provider || '—';
+    for (const id of res.models) {
+      const opt = document.createElement('option');
+      opt.value = id;
+      list.append(opt);
+    }
+    if (res.error) $('settings-error').textContent = res.error;
+    else if (!res.models.length) $('settings-error').textContent = 'No models found. Is the engine running?';
+  } catch (e) {
+    $('settings-error').textContent = e.message;
+  }
+}
+
+$('open-settings').addEventListener('click', async () => {
+  fillSettings(await api('/api/settings'));
+  $('settings-error').textContent = '';
+  const auto = await api('/api/system/autostart').catch(() => ({ available: false }));
+  form.elements.startWithWindows.disabled = !auto.available;
+  $('autostart-hint').textContent = auto.available
+    ? 'Adds one entry to your Windows sign-in programs; untick to remove it.'
+    : 'Available in the installed app (package.ps1), not when running from source.';
+  dialog.showModal();
+  loadModels();
+});
+$('close-settings').addEventListener('click', () => dialog.close());
+$('test-speaker').addEventListener('click', () => {
+  voice.speak('Voice check. All systems are online, sir.');
+  voice.speak('اختبار الصوت. كل الأنظمة شغالة.');
+});
+$('refresh-models').addEventListener('click', async () => {
+  if (await saveSettings()) loadModels();
+});
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (await saveSettings()) {
+    dialog.close();
+    loadModels();
+  }
+});
+
+// ── Memory ─────────────────────────────────────────────────────────────────
+const memoryDialog = $('memory');
+
+async function showMemory() {
+  $('memory-error').textContent = '';
+  const list = $('memory-list');
+  list.replaceChildren();
+  let data;
+  try {
+    data = await api('/api/memory');
+  } catch (e) {
+    $('memory-error').textContent = e.message;
+    return;
+  }
+  if (data.error) $('memory-error').textContent = data.error;
+  if (!data.facts.length) {
+    const li = document.createElement('li');
+    li.className = 'empty';
+    li.textContent = 'Nothing remembered yet. Tell Haris something worth keeping and approve it.';
+    list.append(li);
+  }
+  for (const f of [...data.facts].reverse()) {
+    const li = document.createElement('li');
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.textContent = f.category;
+    const text = document.createElement('span');
+    text.className = 'fact';
+    text.dir = 'auto';
+    text.textContent = f.text;
+    text.title = `Remembered ${new Date(f.created).toLocaleString()}`;
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'btn ghost danger';
+    del.textContent = '✕';
+    del.title = 'Forget this';
+    del.addEventListener('click', async () => {
+      await api(`/api/memory/${encodeURIComponent(f.id)}`, { method: 'DELETE' });
+      showMemory();
+    });
+    li.append(tag, text, del);
+    list.append(li);
+  }
+}
+
+$('open-memory').addEventListener('click', () => {
+  memoryDialog.showModal();
+  showMemory();
+});
+$('close-memory').addEventListener('click', () => memoryDialog.close());
+$('memory-wipe').addEventListener('click', async () => {
+  if (!window.confirm('Forget everything Haris remembers about you? This cannot be undone.')) return;
+  await api('/api/memory', { method: 'DELETE' });
+  showMemory();
+});
+
+// ── Start ──────────────────────────────────────────────────────────────────
+async function start() {
+  boot();
+  tickClock();
+  setInterval(tickClock, 1000);
+  $('endpoint').textContent = `127.0.0.1:${location.port}`;
+
+  if (!hasToken()) {
+    $('session').textContent = 'NOT AUTHORISED';
+    addMessage('error', 'This window has no session token. Start Haris from its launcher so it can open its own window.');
+    setState('error');
+    return;
+  }
+  $('session').textContent = 'Token verified';
+
+  try {
+    const view = await api('/api/settings');
+    settingsCache = view.settings;
+    engineReady = view.engineReady;
+    applyIdentity(view.settings);
+    loadModels();
+    applyVoiceSettings(view.settings);
+  } catch (e) {
+    addMessage('error', e.message);
+  }
+
+  refreshSystem();
+  refreshActivity();
+  refreshVoiceStatus();
+  setInterval(refreshSystem, 2000);
+  setInterval(refreshVoiceStatus, 15000);
+  subscribeEvents({
+    notification: ({ title, message }) => {
+      addMessage('reminder', `${title}: ${message}`);
+      reactor.pulse(0.8);
+    },
+    // The core asks for a photo only after the user approved look_through_camera.
+    camera: ({ id }) => takePhoto(id, {
+      onCameraState: (on) => { $('cam-badge').hidden = !on; },
+      onFlash: flash,
+    }).catch(() => addMessage('error', 'The camera photo could not be taken.')),
+  });
+  input.focus();
+
+  // Haris greets out loud as soon as it opens, in English; replies follow the language the user
+  // speaks (Settings → "replies in": auto). On a fresh install (no engine yet) it says how to start
+  // and opens Configure; otherwise the daily briefing (once a day) or a short greeting.
+  const briefing = engineReady ? await api('/api/briefing/claim', { method: 'POST' }).catch(() => null) : null;
+  setTimeout(() => {
+    if (!engineReady) {
+      greet(`Hello, I'm ${assistantName}. Choose an engine in Configure and we can begin.`);
+      $('open-settings').click();
+    } else if (briefing?.prompt) {
+      send(briefing.prompt, { label: '☀ Daily briefing' });
+    } else {
+      greet(`Good ${partOfDay()}${namePart()}. All systems are online.`);
+    }
+  }, 1600);
+}
+
+/** Shows a fixed line and speaks it — no model needed, so it works before anything is set up. */
+function greet(text) {
+  addMessage('assistant', text);
+  if (settingsCache?.voiceReplies !== false) voice.speak(text);
+}
+
+function partOfDay() {
+  const h = new Date().getHours();
+  return h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
+}
+function namePart() {
+  return userName ? `, ${userName}` : ', sir';
+}
+
+start();

@@ -1,0 +1,29 @@
+# SearXNG for Haris — a private search engine that only this computer can reach.
+# Everything not set here comes from SearXNG's defaults.
+use_default_settings: true
+
+general:
+  instance_name: "Haris search"
+  enable_metrics: false          # keep no statistics about searches
+
+server:
+  # secret_key comes from the SEARXNG_SECRET environment variable: Haris generates it into
+  # Windows Credential Manager and passes it to Docker in memory (never written to a file)
+  limiter: false                 # single user on loopback; no bot protection needed
+  public_instance: false
+  image_proxy: false
+  method: "GET"
+
+search:
+  safe_search: 1                 # moderate
+  autocomplete: ""               # no keystrokes sent anywhere
+  formats:
+    - html
+    - json                       # Haris reads results as JSON
+
+outgoing:
+  request_timeout: 4.0
+  max_request_timeout: 8.0
+
+ui:
+  query_in_title: false

@@ -1,0 +1,54 @@
+# Haris voice engines — everything runs on this machine.
+# (The "Hey Haris" wake word runs inside Haris itself, with Vosk; it needs no container.)
+#
+#   docker compose -f voice/compose.yaml up -d
+#
+# Hardening, applied to every service:
+#   * ports are published on 127.0.0.1 only — nothing on the LAN can reach them;
+#   * no Linux capabilities, no privilege escalation, read-only root filesystem;
+#   * memory and CPU caps so a stuck model cannot take the laptop down;
+#   * images pinned to exact versions.
+# The containers need the internet once, to download their models into the named volumes.
+# After that, set WHISPER_OFFLINE=true (see .env.example) to forbid further downloads.
+
+name: haris-voice
+
+x-hardening: &hardening
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  restart: "no"            # Haris starts and stops these itself
+  logging:
+    driver: local
+    options: { max-size: "5m", max-file: "2" }
+
+services:
+  # Speech-to-text: faster-whisper, multilingual (Arabic + English).
+  whisper:
+    <<: *hardening
+    image: rhasspy/wyoming-whisper:3.8.1
+    # beam-size 1 + VAD trimming roughly halve latency on a laptop CPU with little accuracy loss.
+    command: ["--model", "${WHISPER_MODEL:-small-int8}", "--data-dir", "/data",
+              "--beam-size", "1", "--cpu-threads", "4", "--vad-filter",
+              "--initial-prompt", "Haris"]
+    environment:
+      WYO_WHISPER_LOCAL_FILES_ONLY: "${WHISPER_OFFLINE:-false}"
+    ports: ["127.0.0.1:10300:10300"]
+    volumes: ["whisper-data:/data"]
+    mem_limit: 2g
+    cpus: 4
+
+  # Text-to-speech: Piper. English (British) by default; other voices load on request.
+  piper:
+    <<: *hardening
+    image: rhasspy/wyoming-piper:2.5.2
+    command: ["--voice", "${PIPER_VOICE:-en_GB-alan-medium}", "--data-dir", "/data", "--download-dir", "/data"]
+    ports: ["127.0.0.1:10200:10200"]
+    volumes: ["piper-data:/data"]
+    mem_limit: 1g
+    cpus: 2
+
+volumes:
+  whisper-data:
+  piper-data:

@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="no-referrer" />
+  <title>H.A.R.I.S.</title>
+  <script type="module" src="/src/main.js"></script>
+</head>
+<body data-state="idle">
+  <canvas id="reactor" aria-hidden="true"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <main class="hud">
+    <header class="topbar">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+          <circle cx="20" cy="20" r="17" />
+          <circle cx="20" cy="20" r="11" />
+          <path d="M20 10 L29 25 L11 25 Z" />
+        </svg>
+        <div>
+          <h1 id="assistant-name">H.A.R.I.S.</h1>
+          <p class="sub">Just A Rather Very Intelligent System</p>
+        </div>
+      </div>
+
+      <div class="state-group">
+        <div class="state-pill" role="status">
+          <span class="state-dot"></span>
+          <span id="state-label">STANDBY</span>
+        </div>
+        <div class="mic-badge" id="mic-badge" hidden title="The microphone is open">
+          <span class="mic-dot"></span><span id="mic-label">MIC</span>
+        </div>
+        <div class="mic-badge cam-badge" id="cam-badge" hidden title="The camera is on">
+          <span class="mic-dot"></span><span>CAMERA ON</span>
+        </div>
+      </div>
+
+      <div class="clock">
+        <div id="clock-time">--:--:--</div>
+        <div id="clock-date"></div>
+      </div>
+    </header>
+
+    <aside class="panel panel-left" aria-label="System telemetry">
+      <h2><span>01</span> System</h2>
+
+      <div class="gauge">
+        <div class="gauge-head"><span>CPU LOAD</span><b id="cpu-value">--%</b></div>
+        <div class="bar"><i id="cpu-bar"></i></div>
+        <canvas id="cpu-spark" class="spark" width="260" height="46"></canvas>
+      </div>
+
+      <div class="gauge">
+        <div class="gauge-head"><span>MEMORY</span><b id="mem-value">--</b></div>
+        <div class="bar"><i id="mem-bar"></i></div>
+      </div>
+
+      <dl class="rows">
+        <div><dt>Processor</dt><dd id="cpu-name">—</dd></div>
+        <div><dt>Threads</dt><dd id="cores">—</dd></div>
+        <div><dt>Processes</dt><dd id="processes">—</dd></div>
+        <div><dt>Uptime</dt><dd id="uptime">—</dd></div>
+        <div><dt>Power</dt><dd id="power">—</dd></div>
+      </dl>
+
+      <h2><span>05</span> Activity</h2>
+      <ol id="activity" class="activity" aria-live="polite"></ol>
+      <button id="undo" class="btn ghost" type="button" disabled>↶ Undo</button>
+      <p class="hint undo-label" id="undo-label"></p>
+    </aside>
+
+    <aside class="panel panel-right" aria-label="AI core and security">
+      <h2><span>02</span> AI Core</h2>
+      <dl class="rows">
+        <div><dt>Engine</dt><dd id="engine">—</dd></div>
+        <div><dt>First token</dt><dd id="latency">—</dd></div>
+        <div><dt>Throughput</dt><dd id="throughput">—</dd></div>
+      </dl>
+
+      <h2><span>03</span> Voice</h2>
+      <dl class="rows voice-rows">
+        <div><dt>Hearing</dt><dd id="voice-stt">—</dd></div>
+        <div><dt>Speech</dt><dd id="voice-tts">—</dd></div>
+        <div><dt>Wake word</dt><dd id="voice-wake">—</dd></div>
+      </dl>
+
+      <h2><span>04</span> Security</h2>
+      <dl class="rows secure">
+        <div><dt>Network</dt><dd>Loopback only</dd></div>
+        <div><dt>Endpoint</dt><dd id="endpoint">—</dd></div>
+        <div><dt>Session</dt><dd id="session">—</dd></div>
+        <div><dt>Keys</dt><dd>OS credential vault</dd></div>
+        <div><dt>Tools</dt><dd id="tools-count">—</dd></div>
+        <div><dt>Context</dt><dd id="context-state">Clean</dd></div>
+      </dl>
+
+      <div class="panel-buttons">
+        <button id="open-memory" class="btn ghost" type="button">◈ Memory</button>
+        <button id="open-settings" class="btn ghost" type="button">⚙ Configure</button>
+      </div>
+    </aside>
+
+    <section class="console" aria-label="Conversation">
+      <div id="transcript" class="transcript" aria-live="polite"></div>
+      <form id="composer" class="composer" autocomplete="off">
+        <span class="caret-mark" aria-hidden="true">›</span>
+        <textarea id="input" rows="1" dir="auto" maxlength="8000"
+                  placeholder="Awaiting your instructions, sir…"></textarea>
+        <button class="btn ghost mic-btn" type="button" id="mic" title="Talk (or hold Ctrl+Space)" aria-label="Talk">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+        </button>
+        <button class="btn" type="submit" id="send">Send</button>
+        <button class="btn ghost" type="button" id="reset" title="Forget this conversation">Clear</button>
+      </form>
+    </section>
+  </main>
+
+  <div id="boot" class="boot" aria-hidden="true"><pre id="boot-log"></pre></div>
+  <div id="flash" class="flash" aria-hidden="true"></div>
+
+  <dialog id="settings" class="settings">
+    <form id="settings-form">
+      <header>
+        <h2>Configuration</h2>
+        <button type="button" class="btn ghost" id="close-settings" aria-label="Close">✕</button>
+      </header>
+
+      <fieldset>
+        <legend>Identity</legend>
+        <label>Assistant name <input name="assistantName" maxlength="40" required /></label>
+        <label>Your name <input name="userName" maxlength="40" /></label>
+        <label>Home city (for weather) <input name="homeCity" maxlength="60" placeholder="e.g. Cairo" /></label>
+        <label class="check"><input type="checkbox" name="morningBriefing" /> Daily briefing on the first launch of the day</label>
+        <label class="check"><input type="checkbox" name="startWithWindows" /> Start Haris when I sign in to Windows</label>
+        <p class="hint" id="autostart-hint"></p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Access</legend>
+        <label>Allowed folders — one per line
+          <textarea name="allowedFolders" rows="4" spellcheck="false"></textarea>
+        </label>
+        <p class="hint">File tools can only see these folders. System folders, AppData and your whole home folder are refused.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Voice</legend>
+        <label class="check"><input type="checkbox" name="voiceReplies" /> Speak replies aloud</label>
+        <label class="check"><input type="checkbox" name="voiceWake" /> Listen for “Hey Haris” (microphone stays open; audio goes only to the local wake-word engine)</label>
+        <label class="check"><input type="checkbox" name="voiceFollowUp" /> Conversation mode: after a spoken answer, listen 5 s for a follow-up (no wake word)</label>
+        <label>I speak
+          <select name="sttLanguage">
+            <option value="auto">Detect automatically</option>
+            <option value="ar">Arabic (best for Egyptian Arabic)</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+        <label>Haris replies in
+          <select name="replyLanguage">
+            <option value="auto">The language I use</option>
+            <option value="ar">Egyptian Arabic, always</option>
+            <option value="en">English, always</option>
+          </select>
+        </label>
+        <label>English voice <input name="voiceEnglish" placeholder="en_GB-alan-medium" /></label>
+        <label>Arabic voice <input name="voiceArabic" placeholder="ar_JO-kareem-medium" /></label>
+        <button type="button" class="btn ghost" id="test-speaker">▶ Test speaker</button>
+        <p class="hint">Push-to-talk: hold Ctrl+Space, or click the microphone. Approvals can never be given by voice.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Engine</legend>
+        <label>Provider
+          <select name="provider">
+            <option value="OLLAMA">Ollama (local)</option>
+            <option value="LM_STUDIO">LM Studio (local)</option>
+            <option value="COLAB">Ollama on Google Colab (free GPU)</option>
+            <option value="ANTHROPIC">Claude (Anthropic API)</option>
+            <option value="OPENAI_COMPATIBLE">OpenAI-compatible cloud</option>
+          </select>
+        </label>
+
+        <div class="provider-fields" data-provider="OLLAMA">
+          <label>Ollama URL <input name="ollamaBaseUrl" required /></label>
+          <label>Model <input name="ollamaModel" list="model-list" placeholder="e.g. qwen2.5:3b" /></label>
+        </div>
+
+        <div class="provider-fields" data-provider="LM_STUDIO">
+          <label>LM Studio URL <input name="lmStudioBaseUrl" required /></label>
+          <label>Model <input name="lmStudioModel" list="model-list" /></label>
+        </div>
+
+        <div class="provider-fields" data-provider="COLAB">
+          <p class="hint">Protected way: run <b>haris_colab.ipynb</b> in Colab (GPU runtime) and paste the address
+            and access token it prints. You can also paste a Colab port address (https://11434-….colab.dev/…) as-is.
+            Your conversations are processed on Google's servers.</p>
+          <label>Colab address <input name="colabBaseUrl" placeholder="https://….ngrok-free.dev  or  https://….trycloudflare.com" /></label>
+          <label>Model <input name="colabModel" list="model-list" placeholder="e.g. qwen2.5:7b" /></label>
+          <label>Access token <input name="colabKey" type="password" autocomplete="off" placeholder="leave empty to keep" /></label>
+          <p class="hint" id="colab-key-state"></p>
+          <label class="check"><input type="checkbox" name="colabStt" /> Also recognise speech on Colab's GPU (faster; needs the notebook's access token — falls back to this PC)</label>
+        </div>
+
+        <div class="provider-fields" data-provider="ANTHROPIC">
+          <label>Model <input name="anthropicModel" list="model-list" required /></label>
+          <label>Effort
+            <select name="anthropicEffort">
+              <option value="low">Low — fastest</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="xhigh">Extra high</option>
+              <option value="max">Max</option>
+            </select>
+          </label>
+          <label>API key <input name="anthropicKey" type="password" autocomplete="off" placeholder="sk-ant-…  (leave empty to keep)" /></label>
+          <p class="hint" id="anthropic-key-state"></p>
+          <label class="check"><input type="checkbox" name="webSearch" /> Allow Claude to search the web (results are treated as untrusted)</label>
+        </div>
+
+        <div class="provider-fields" data-provider="OPENAI_COMPATIBLE">
+          <label>Base URL <input name="openAiBaseUrl" placeholder="https://api.openai.com" /></label>
+          <label>Model <input name="openAiModel" list="model-list" /></label>
+          <label>API key <input name="openAiKey" type="password" autocomplete="off" placeholder="leave empty to keep" /></label>
+          <p class="hint" id="openai-key-state"></p>
+        </div>
+
+        <datalist id="model-list"></datalist>
+        <button type="button" class="btn ghost" id="refresh-models">Save &amp; detect models</button>
+      </fieldset>
+
+      <p class="hint">Keys are written to Windows Credential Manager and can never be read back by this window.</p>
+      <p class="form-error" id="settings-error" role="alert"></p>
+
+      <footer>
+        <button type="submit" class="btn">Save</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog id="memory" class="settings memory-dialog" aria-labelledby="memory-title">
+    <div class="memory-inner">
+      <header>
+        <h2 id="memory-title">Memory</h2>
+        <button type="button" class="btn ghost" id="close-memory" aria-label="Close">✕</button>
+      </header>
+      <p class="hint">Everything Haris remembers about you, encrypted on this computer (AES-256, key in Windows
+        Credential Manager). Each fact was approved by you. Delete anything at any time.</p>
+      <ul id="memory-list" class="memory-list"></ul>
+      <p class="form-error" id="memory-error" role="alert"></p>
+      <footer>
+        <button type="button" class="btn ghost danger" id="memory-wipe">Forget everything</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog id="confirm" class="confirm" aria-labelledby="confirm-title">
+    <div class="confirm-inner">
+      <header>
+        <span class="risk-badge" id="confirm-risk">CONFIRM</span>
+        <h2 id="confirm-title">Authorisation required</h2>
+      </header>
+      <p class="confirm-tool" id="confirm-tool"></p>
+      <p class="confirm-summary" id="confirm-summary" dir="auto"></p>
+      <figure class="confirm-preview" id="confirm-preview-box" hidden>
+        <img id="confirm-preview" alt="Exactly what would be shared" />
+        <figcaption>This exact picture is what would be shared. Check it for anything private.</figcaption>
+      </figure>
+      <p class="confirm-destination" id="confirm-destination"></p>
+      <p class="confirm-warning" id="confirm-warning" hidden>
+        ⚠ Outside content (a file, the clipboard or a web page) is in this conversation and may contain
+        planted instructions. Approve only if this is something <b>you</b> asked for.
+      </p>
+      <details>
+        <summary>Exact arguments</summary>
+        <pre id="confirm-args" dir="ltr"></pre>
+      </details>
+      <footer>
+        <button class="btn ghost danger" type="button" id="confirm-deny">Deny</button>
+        <button class="btn ghost" type="button" id="confirm-session">Allow for session</button>
+        <button class="btn" type="button" id="confirm-once">Allow once</button>
+      </footer>
+      <div class="confirm-timer"><i id="confirm-timer-bar"></i></div>
+    </div>
+  </dialog>
+</body>
+</html>

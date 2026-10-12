@@ -1,0 +1,23 @@
+# Build output
+target/
+ui/node_modules/
+ui/dist/
+src/main/resources/static/
+
+# Downloaded models (models/fetch-models.ps1 fetches and verifies them)
+models/*/
+
+# Never commit secrets or personal data (keys live in the OS vault anyway)
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*credentials*.json
+
+# Editors / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
