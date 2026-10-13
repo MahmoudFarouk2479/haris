@@ -90,7 +90,7 @@ two minutes; *Run all* again.
 | Running model-written code | Impossible: no shell, no exec, no script tool. Every tool is a fixed operation with validated arguments. |
 | The model approving its own actions | Approvals come only from a click in the HUD — buttons arm after 0.7 s, Esc and a 2-minute timeout deny. Approvals can't be spoken (a video nearby could say "allow"). |
 | Prompt injection (files, clipboard, web, screenshots) | Marked as outside content. Once it is in the conversation, "allow for session" stops working and every action that sends data out shows the exact data for approval. |
-| Files outside what you chose | `PathGuard`: real-path checks (no `..`, symlink or junction escapes), no UNC or alternate data streams, secrets (`.env`, keys, `.kdbx` …) unreadable, executables and scripts unwritable. |
+| Files outside what you chose | `PathGuard`: real-path checks (no `..`, symlink or junction escapes), no UNC or alternate data streams, secrets (`.env`, keys, `.kdbx` …) unreadable. New files can only be text types (`.txt`, `.md`, `.csv`, `.json` …), a rename may not change a file's type, and nothing is created or renamed to a type Windows would run. |
 | SSRF from web tools | Only public addresses on ports 80/443; DNS answers checked inside the resolver and pinned; private, link-local, CGNAT and metadata addresses refused; redirects re-checked. |
 | Memory poisoning | Each new memory needs approval; passwords, codes and card numbers are refused. |
 | A stalled cloud connection hanging the app | Remote engines are abandoned after two minutes of silence, mid-reply included. |

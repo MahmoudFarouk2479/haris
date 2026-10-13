@@ -59,7 +59,7 @@ public class WriteFileTool implements Tool {
     @Override
     public String summarize(JsonNode input) throws ToolException {
         String mode = input.has("mode") ? Args.oneOf(input, "mode", MODES) : "create";
-        Path target = paths.writable(Args.str(input, "path", 1000));
+        Path target = paths.writableTextFile(Args.str(input, "path", 1000));
         int chars = Args.str(input, "content", MAX_CHARS).length();
         String verb = switch (mode) {
             case "overwrite" -> "OVERWRITE";
@@ -72,7 +72,7 @@ public class WriteFileTool implements Tool {
     @Override
     public ToolOutcome run(JsonNode input) throws ToolException {
         String mode = input.has("mode") ? Args.oneOf(input, "mode", MODES) : "create";
-        Path target = paths.writable(Args.str(input, "path", 1000));
+        Path target = paths.writableTextFile(Args.str(input, "path", 1000));
         String content = Args.str(input, "content", MAX_CHARS);
         boolean existed = Files.exists(target);
         if (existed && !Files.isRegularFile(target)) {

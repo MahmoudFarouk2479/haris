@@ -101,4 +101,53 @@ class PathGuardTest {
         assertThatThrownBy(() -> guard.existing("\\\\server\\share\\file.txt")).isInstanceOf(ToolException.class);
         assertThatThrownBy(() -> guard.writable(granted.resolve("notes.txt") + ":evil")).isInstanceOf(ToolException.class);
     }
+
+    @Test
+    void writesOnlyTextFileTypes() throws ToolException {
+        for (String name : List.of("x.pyw", "x.msc", "x", "x.html", "x.library-ms", "x.pyw.")) {
+            assertThatThrownBy(() -> guard.writableTextFile(granted.resolve(name).toString()))
+                    .as(name).isInstanceOf(ToolException.class);
+        }
+        assertThat(guard.writableTextFile(granted.resolve("x.md").toString())).isEqualTo(granted.resolve("x.md"));
+        assertThat(guard.writableTextFile(granted.resolve("x.MD").toString())).isEqualTo(granted.resolve("x.MD"));
+    }
+
+    @Test
+    void renamesKeepTheFileType() throws IOException, ToolException {
+        Path photo = Files.writeString(granted.resolve("a.jpg"), "x");
+        Path notes = granted.resolve("notes.txt");
+        assertThat(guard.moveTarget(photo, granted.resolve("b.JPG").toString())).isEqualTo(granted.resolve("b.JPG"));
+        assertThat(guard.moveTarget(notes, granted.resolve("notes.md").toString())).isEqualTo(granted.resolve("notes.md"));
+        assertThatThrownBy(() -> guard.moveTarget(notes, granted.resolve("notes.pyw").toString()))
+                .isInstanceOf(ToolException.class);
+        assertThatThrownBy(() -> guard.moveTarget(notes, granted.resolve("notes.jpg").toString()))
+                .isInstanceOf(ToolException.class);
+    }
+
+    @Test
+    void foldersWithDotsCanStillBeRenamed() throws IOException, ToolException {
+        Path folder = Files.createDirectory(granted.resolve("v1.2"));
+        assertThat(guard.moveTarget(folder, granted.resolve("v1.3").toString())).isEqualTo(granted.resolve("v1.3"));
+        assertThatThrownBy(() -> guard.moveTarget(folder,
+                granted.resolve("x.{645FF040-5081-101B-9F08-00AA002F954E}").toString()))
+                .isInstanceOf(ToolException.class);
+    }
+
+    @Test
+    void refusesShellNamespaceFolders() throws ToolException {
+        assertThatThrownBy(() -> guard.writableFolder(
+                granted.resolve("x.{645FF040-5081-101B-9F08-00AA002F954E}").toString()))
+                .isInstanceOf(ToolException.class);
+        assertThat(guard.writableFolder(granted.resolve("Projects").toString())).isEqualTo(granted.resolve("Projects"));
+    }
+
+    @Test
+    void refusesScriptAndShellTypesThatWereMissing() {
+        for (String name : List.of("a.py", "a.pyw", "a.pyc", "a.pyz", "a.msc", "a.wsc", "a.sct", "a.chm",
+                "a.library-ms", "a.searchConnector-ms", "a.settingcontent-ms", "a.website", "a.theme",
+                "a.themepack", "a.xll", "a.xlam", "a.docm", "a.xlsm", "a.pptm", "a.iso", "a.img", "a.vhd", "a.vhdx")) {
+            assertThatThrownBy(() -> guard.writable(granted.resolve(name).toString()))
+                    .as(name).isInstanceOf(ToolException.class);
+        }
+    }
 }

@@ -51,13 +51,14 @@ public class MoveFileTool implements Tool {
 
     @Override
     public String summarize(JsonNode input) throws ToolException {
-        return "Move " + paths.existing(Args.str(input, "from", 1000)) + " → " + paths.writable(Args.str(input, "to", 1000));
+        Path from = paths.existing(Args.str(input, "from", 1000));
+        return "Move " + from + " → " + paths.moveTarget(from, Args.str(input, "to", 1000));
     }
 
     @Override
     public ToolOutcome run(JsonNode input) throws ToolException {
         Path from = paths.existing(Args.str(input, "from", 1000));
-        Path to = paths.writable(Args.str(input, "to", 1000));
+        Path to = paths.moveTarget(from, Args.str(input, "to", 1000));
         if (paths.roots().contains(from)) {
             throw new ToolException("A granted folder itself cannot be moved.");
         }

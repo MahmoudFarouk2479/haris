@@ -48,12 +48,12 @@ public class CreateFolderTool implements Tool {
 
     @Override
     public String summarize(JsonNode input) throws ToolException {
-        return "Create folder " + paths.writable(Args.str(input, "path", 1000));
+        return "Create folder " + paths.writableFolder(Args.str(input, "path", 1000));
     }
 
     @Override
     public ToolOutcome run(JsonNode input) throws ToolException {
-        Path dir = paths.writable(Args.str(input, "path", 1000));
+        Path dir = paths.writableFolder(Args.str(input, "path", 1000));
         if (Files.exists(dir)) {
             throw new ToolException("Already exists: " + dir);
         }
