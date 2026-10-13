@@ -82,7 +82,7 @@ two minutes; *Run all* again.
 | Threat | Defence |
 |---|---|
 | Other devices on the network | Server binds to `127.0.0.1` only. No firewall rules, no admin rights, ever. |
-| Other programs / web pages on this PC | Per-launch 256-bit session token, handed to the window the core opens itself (URL fragment). |
+| Other programs / web pages on this PC | Per-launch 256-bit session token, handed to the window the core opens itself (URL fragment), required on every request except the HUD's own static files. Paths with tricks Spring would rewrite (`;`, `%`, `\`, `//`, `.` segments) are refused outright. |
 | DNS rebinding · cross-site requests | `Host` must be the loopback address; state-changing calls must carry this server's `Origin`. |
 | Script injection in the HUD | Strict CSP (`script-src 'self'`, `connect-src 'self'`), model output rendered as text only. |
 | Leaked API keys | Keys live in Windows Credential Manager; the UI can write them but never read them back. |
