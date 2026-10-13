@@ -53,5 +53,13 @@ public interface Tool {
     /** One line describing exactly what this call will do, for the approval card and the audit log. */
     String summarize(JsonNode input) throws ToolException;
 
+    /**
+     * What the permanent audit log keeps for this call. Never argument content (clipboard text,
+     * message bodies, memory facts): the approval card shows that, the log on disk does not.
+     */
+    default String auditSummary(JsonNode input) throws ToolException {
+        return summarize(input);
+    }
+
     ToolOutcome run(JsonNode input) throws ToolException;
 }

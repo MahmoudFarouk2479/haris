@@ -68,6 +68,14 @@ public class ComposeMessageTool implements Tool {
     }
 
     @Override
+    public String auditSummary(JsonNode input) throws ToolException {
+        String channel = Args.oneOf(input, "channel", CHANNELS);
+        String to = Args.optStr(input, "to", 120, "");
+        int chars = Args.str(input, "text", 4000).length();
+        return "Draft " + channel + " message" + (to.isEmpty() ? "" : " to " + to) + " (" + chars + " characters)";
+    }
+
+    @Override
     public ToolOutcome run(JsonNode input) throws ToolException {
         String channel = Args.oneOf(input, "channel", CHANNELS);
         String to = Args.optStr(input, "to", 120, "").replaceAll("[\\s()-]", "");

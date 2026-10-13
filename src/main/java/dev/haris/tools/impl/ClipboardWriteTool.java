@@ -47,6 +47,11 @@ public class ClipboardWriteTool implements Tool {
     }
 
     @Override
+    public String auditSummary(JsonNode input) throws ToolException {
+        return "Copy " + Args.str(input, "text", 50_000).length() + " characters to clipboard";
+    }
+
+    @Override
     public ToolOutcome run(JsonNode input) throws ToolException {
         String text = Args.str(input, "text", 50_000);
         try {

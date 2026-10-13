@@ -126,9 +126,11 @@ public class AgentService {
         }
 
         String summary;
+        String auditSummary;
         Risk risk;
         try {
             summary = tool.summarize(input);
+            auditSummary = tool.auditSummary(input);
             risk = tool.risk(input);
         } catch (ToolException e) {
             listener.onTool(call.id(), tool.name(), tool.name(), "error", e.getMessage());
@@ -153,7 +155,7 @@ public class AgentService {
             if (capture != null) {
                 java.util.Arrays.fill(capture.jpeg(), (byte) 0);   // the declined picture is wiped
             }
-            audit.record(tool.name(), summary, risk, "denied", "not run");
+            audit.record(tool.name(), auditSummary, risk, "denied", "not run");
             listener.onTool(call.id(), tool.name(), summary, "denied", null);
             return error(call, "The user denied this action. Do not retry it; ask what they would like instead.");
         }
@@ -170,14 +172,14 @@ public class AgentService {
                 markExternal(conversation, listener);
                 text = fence(text, outcome.jpeg() != null);
             }
-            audit.record(tool.name(), summary, risk, decision, "ok");
+            audit.record(tool.name(), auditSummary, risk, decision, "ok");
             listener.onTool(call.id(), tool.name(), summary, "done", null);
             if (outcome.jpeg() != null) {
                 listener.onImage(call.id(), dataUrl(outcome.jpeg()));
             }
             return new Part.ToolResult(call.id(), text, false, outcome.jpeg());
         } catch (ToolException e) {
-            audit.record(tool.name(), summary, risk, decision, "error: " + e.getMessage());
+            audit.record(tool.name(), auditSummary, risk, decision, "error: " + e.getMessage());
             listener.onTool(call.id(), tool.name(), summary, "error", e.getMessage());
             if (outside) {
                 // A server or a file name can put its own words into an error message.
@@ -187,7 +189,7 @@ public class AgentService {
             return error(call, e.getMessage());
         } catch (RuntimeException e) {
             log.error("Tool {} crashed", tool.name(), e);
-            audit.record(tool.name(), summary, risk, decision, "error: internal");
+            audit.record(tool.name(), auditSummary, risk, decision, "error: internal");
             listener.onTool(call.id(), tool.name(), summary, "error", "internal error");
             if (outside) {
                 markExternal(conversation, listener);   // it may have read something before failing

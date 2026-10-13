@@ -2,8 +2,10 @@ package dev.haris.agent;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -425,5 +427,20 @@ class PermissionGateTest {
         @Override public void onNotice(String message) {}
         @Override public void onSecurity(boolean externalContent) {}
         @Override public void onImage(String callId, String dataUrl) {}
+    }
+
+    @Test
+    void theAuditLogKeepsTheContentFreeSummaryWhileTheCardShowsTheFullOne() {
+        FakeTool clip = new FakeTool("clip_tool", Risk.CONFIRM, false) {
+            @Override public String summarize(JsonNode input) { return "Copy to clipboard: \"hunter2\""; }
+            @Override public String auditSummary(JsonNode input) { return "Copy 7 characters to clipboard"; }
+        };
+        useTools(clip);
+        model.callsThenText("clip_tool");
+        agent.run("copy my password", listener);
+
+        assertThat(listener.asked.getFirst().summary()).contains("hunter2");
+        verify(audit).record("clip_tool", "Copy 7 characters to clipboard", Risk.CONFIRM, "approved", "ok");
+        verify(audit, never()).record(any(), contains("hunter2"), any(), any(), any());
     }
 }

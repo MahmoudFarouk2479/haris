@@ -56,13 +56,18 @@ public class ForgetTool implements Tool {
     }
 
     @Override
+    public String auditSummary(JsonNode input) throws ToolException {
+        return "Forget memory " + Args.str(input, "id", 20);
+    }
+
+    @Override
     public ToolOutcome run(JsonNode input) throws ToolException {
         String id = Args.str(input, "id", 20);
         try {
             MemoryStore.Fact fact = memory.store().all().stream().filter(f -> f.id().equals(id)).findFirst()
                     .orElseThrow(() -> new ToolException("No memory with id " + id + "."));
             memory.store().remove(id);
-            return ToolOutcome.undoable("Forgotten.", new ToolOutcome.Undo("remember \"" + fact.text() + "\" again",
+            return ToolOutcome.undoable("Forgotten.", new ToolOutcome.Undo("remember memory " + id + " again",
                     () -> memory.store().add(fact.text(), fact.category())));
         } catch (IOException e) {
             throw new ToolException(e.getMessage());

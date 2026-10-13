@@ -66,13 +66,18 @@ public class RememberTool implements Tool {
     }
 
     @Override
+    public String auditSummary(JsonNode input) throws ToolException {
+        return "Remember a fact (" + fact(input).length() + " characters)";   // memory is encrypted; the log is not
+    }
+
+    @Override
     public ToolOutcome run(JsonNode input) throws ToolException {
         String text = fact(input);
         String category = Args.oneOf(input, "category", CATEGORIES);
         try {
             MemoryStore.Fact f = memory.store().add(text, category);
             return ToolOutcome.undoable("Remembered (id " + f.id() + ").",
-                    new ToolOutcome.Undo("forget \"" + text + "\"", () -> memory.store().remove(f.id())));
+                    new ToolOutcome.Undo("forget memory " + f.id(), () -> memory.store().remove(f.id())));
         } catch (IOException e) {
             throw new ToolException(e.getMessage());
         }
