@@ -134,6 +134,19 @@ class PathGuardTest {
     }
 
     @Test
+    void refusesShellNamespaceFoldersWhoseNamesEndInDots() throws IOException {
+        // Windows drops trailing dots when it stores a name, so "x.{CLSID}." becomes "x.{CLSID}".
+        String clsid = "x.{645FF040-5081-101B-9F08-00AA002F954E}";
+        for (String name : List.of(clsid + ".", clsid + "...", clsid + ". .")) {
+            assertThatThrownBy(() -> guard.writableFolder(granted.resolve(name).toString()))
+                    .as(name).isInstanceOf(ToolException.class);
+        }
+        Path folder = Files.createDirectory(granted.resolve("v2.0"));
+        assertThatThrownBy(() -> guard.moveTarget(folder, granted.resolve(clsid + ".").toString()))
+                .isInstanceOf(ToolException.class);
+    }
+
+    @Test
     void refusesShellNamespaceFolders() throws ToolException {
         assertThatThrownBy(() -> guard.writableFolder(
                 granted.resolve("x.{645FF040-5081-101B-9F08-00AA002F954E}").toString()))

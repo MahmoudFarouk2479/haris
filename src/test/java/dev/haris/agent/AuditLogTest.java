@@ -30,13 +30,16 @@ class AuditLogTest {
                 line("remember", "Remember: \"Lives at 5 Nile St\""),
                 line("forget", "Forget: \"Wife's name is Mona\""),
                 line("read_file", "Read file C:\\Users\\me\\notes.txt"),
+                line("undo", "forget \"My PIN hint is Zamalek\""),
+                line("undo", "remember \"Sister lives in Alexandria\" again"),
+                line("undo", "delete C:\\Users\\me\\draft.txt"),
                 "not json at all"));
 
         new AuditLog(json, dir);
 
         String after = Files.readString(file);
-        assertThat(after).doesNotContain("hunter2", "secret plan", "Nile St", "Mona");
-        assertThat(after).contains("(redacted)", "Read file", "not json at all");
+        assertThat(after).doesNotContain("hunter2", "secret plan", "Nile St", "Mona", "Zamalek", "Alexandria");
+        assertThat(after).contains("(redacted)", "Read file", "not json at all", "delete C:");
         assertThat(dir.resolve(AuditLog.SCRUB_MARKER)).exists();
 
         Files.writeString(file, line("clipboard_write", "written after the scrub") + System.lineSeparator(),

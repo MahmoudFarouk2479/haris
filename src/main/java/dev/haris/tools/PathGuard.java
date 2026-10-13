@@ -149,7 +149,9 @@ public class PathGuard {
     }
 
     private static void requireNotShellNamespace(Path real) throws ToolException {
-        if (SHELL_NAMESPACE.matcher(real.getFileName().toString().strip()).matches()) {
+        // Judged as Windows stores the name: trailing dots and spaces are dropped ("x.{CLSID}." → "x.{CLSID}").
+        String stored = real.getFileName().toString().replaceAll("[. ]+$", "");
+        if (SHELL_NAMESPACE.matcher(stored).matches()) {
             throw new ToolException("Folder names ending in .{…} turn into shell shortcuts and are not allowed.");
         }
     }

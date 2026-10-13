@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import dev.haris.settings.SettingsService;
 import dev.haris.tools.Risk;
@@ -39,6 +40,8 @@ public class AuditLog {
     static final String SCRUB_MARKER = "audit.redacted-v1";
     /** Tools whose older summaries quoted private text. */
     private static final Set<String> CONTENT_TOOLS = Set.of("clipboard_write", "compose_message", "remember", "forget");
+    /** Older undo entries described undoing a memory change by quoting the fact itself. */
+    private static final Pattern QUOTED_MEMORY_UNDO = Pattern.compile("^(forget|remember) \".*", Pattern.DOTALL);
 
     public record Entry(String time, String tool, String summary, Risk risk, String decision, String outcome) {}
 
@@ -101,7 +104,9 @@ public class AuditLog {
     private String redact(String line) {
         try {
             JsonNode node = json.readTree(line);
-            if (node instanceof ObjectNode entry && CONTENT_TOOLS.contains(entry.path("tool").asString())) {
+            if (node instanceof ObjectNode entry && (CONTENT_TOOLS.contains(entry.path("tool").asString())
+                    || entry.path("tool").asString().equals("undo")
+                    && QUOTED_MEMORY_UNDO.matcher(entry.path("summary").asString()).matches())) {
                 entry.put("summary", "(redacted)");
                 return json.writeValueAsString(entry);
             }
