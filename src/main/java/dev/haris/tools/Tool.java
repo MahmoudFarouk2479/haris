@@ -40,6 +40,16 @@ public interface Tool {
         return false;
     }
 
+    /**
+     * Whether this tool's output can carry text that someone other than the user chose:
+     * file and folder names, web pages, app names, place names, screen contents.
+     * Such output — and any error such a tool reports — is fenced off for the model and
+     * marks the conversation as holding outside content.
+     */
+    default boolean readsOutsideContent() {
+        return false;
+    }
+
     /** One line describing exactly what this call will do, for the approval card and the audit log. */
     String summarize(JsonNode input) throws ToolException;
 
