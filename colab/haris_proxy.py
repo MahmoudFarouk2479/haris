@@ -6,7 +6,8 @@ Ollama has no authentication of its own, and a Colab tunnel address is public: w
 proxy anyone who learned the address could use (or wipe) the models. The proxy:
 
   * listens on 127.0.0.1 only — the tunnel is its sole way in;
-  * requires "Authorization: Bearer <token>" (constant-time comparison, per-client lockout);
+  * requires "Authorization: Bearer <token>" (constant-time comparison, per-client lockout
+    keyed on the address the tunnel's edge records, never on headers a client can forge);
   * forwards exactly two Ollama endpoints — GET /v1/models and POST /v1/chat/completions — so
     nothing can pull, delete, copy or create models, or reach Ollama's native /api;
   * streams replies through unchanged (server-sent events), with a request-size cap;
@@ -15,6 +16,7 @@ proxy anyone who learned the address could use (or wipe) the models. The proxy:
 
 Run standalone:  HARIS_PROXY_TOKEN=<token> python haris_proxy.py [--port 8000]
                  [--upstream http://127.0.0.1:11434] [--stt-model large-v3-turbo] [--stt-cache DIR]
+                 [--tunnel cloudflare|ngrok|none]
 """
 import argparse
 import asyncio
@@ -22,6 +24,7 @@ import os
 import secrets
 import threading
 import time
+from collections import OrderedDict
 
 from aiohttp import ClientSession, ClientTimeout, web
 
@@ -32,6 +35,8 @@ MAX_AUDIO = 30 * 16000 * 2           # 30 s of 16 kHz 16-bit mono speech
 LOCKOUT_AFTER = 20                   # failed tokens from one client within the window …
 LOCKOUT_WINDOW = 60                  # … lock that client (only) out for the window
 LANGUAGES = {"ar", "en"}
+MAX_CLIENTS = 10_000                 # clients remembered for lockout; the least recent is forgotten first
+TUNNELS = ("cloudflare", "ngrok", "none")
 
 
 class SpeechToText:
@@ -80,31 +85,56 @@ class SpeechToText:
             return " ".join(s.text.strip() for s in segments).strip()
 
 
-def client_of(request: web.Request) -> str:
-    # Behind a tunnel every request arrives from 127.0.0.1; the tunnel's edge records the real
-    # client (Cloudflare: CF-Connecting-IP, ngrok: X-Forwarded-For), so a stranger guessing tokens
-    # locks out only themselves, never the owner. (The 256-bit token is not guessable anyway.)
-    forwarded = request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
-    return request.headers.get("CF-Connecting-IP") or forwarded or request.remote or "?"
+def client_of(headers, remote: str | None, tunnel: str) -> str:
+    """The real client behind the tunnel, read only from what the tunnel's edge sets itself.
+
+    Cloudflare overwrites CF-Connecting-IP; ngrok appends the client to X-Forwarded-For, so only
+    its last entry is trustworthy. Anything else in those headers was written by the client.
+    """
+    if tunnel == "cloudflare":
+        return headers.get("CF-Connecting-IP") or remote or "?"
+    if tunnel == "ngrok":
+        hops = [hop.strip() for hop in headers.get("X-Forwarded-For", "").split(",") if hop.strip()]
+        return hops[-1] if hops else (remote or "?")
+    return remote or "?"
 
 
-def make_app(token: str, upstream: str, stt: SpeechToText | None) -> web.Application:
+class Failures:
+    """Recent bad-token times per client. Bounded: when full, the least recent client is forgotten."""
+
+    def __init__(self, limit: int = MAX_CLIENTS):
+        self.limit = limit
+        self.by_client: OrderedDict[str, list[float]] = OrderedDict()
+
+    def recent(self, client: str, now: float) -> int:
+        times = [t for t in self.by_client.get(client, []) if now - t < LOCKOUT_WINDOW]
+        if times:
+            self.by_client[client] = times
+            self.by_client.move_to_end(client)
+        else:
+            self.by_client.pop(client, None)
+        return len(times)
+
+    def add(self, client: str, now: float) -> None:
+        self.by_client.setdefault(client, []).append(now)
+        self.by_client.move_to_end(client)
+        while len(self.by_client) > self.limit:
+            self.by_client.popitem(last=False)
+
+
+def make_app(token: str, upstream: str, stt: SpeechToText | None, tunnel: str = "none") -> web.Application:
     expected = f"Bearer {token}".encode()
-    failures: dict[str, list[float]] = {}
+    failures = Failures()
 
     async def handle(request: web.Request) -> web.StreamResponse:
-        client = client_of(request)
+        client = client_of(request.headers, request.remote, tunnel)
         now = time.monotonic()
-        recent = [t for t in failures.get(client, []) if now - t < LOCKOUT_WINDOW]
-        failures[client] = recent
-        if len(failures) > 10_000:
-            failures.clear()
-        if len(recent) >= LOCKOUT_AFTER:
+        if failures.recent(client, now) >= LOCKOUT_AFTER:
             return web.Response(status=429, text="too many bad tokens; wait a minute")
 
         supplied = request.headers.get("Authorization", "").encode()
         if not secrets.compare_digest(supplied, expected):
-            recent.append(now)
+            failures.add(client, now)
             return web.Response(status=401, text="unauthorized")
 
         route = (request.method, request.path)
@@ -158,11 +188,14 @@ def main() -> None:
                         help="faster-whisper model; 'off' disables speech-to-text")
     parser.add_argument("--stt-cache", default=os.environ.get("HARIS_STT_CACHE"),
                         help="where to keep the downloaded speech model (e.g. on Google Drive)")
+    parser.add_argument("--tunnel", choices=TUNNELS, default=os.environ.get("HARIS_TUNNEL", "none"),
+                        help="which tunnel fronts the proxy, so the real client address is read from the "
+                             "header that tunnel's edge sets (default: none — use the peer address)")
     args = parser.parse_args()
-    if not args.token or len(args.token) < 24:
+    if not args.token or len(args.token) < 32:
         raise SystemExit("use a long random token (secrets.token_urlsafe(32))")
     stt = None if args.stt_model == "off" else SpeechToText(args.stt_model, args.stt_cache)
-    web.run_app(make_app(args.token, args.upstream, stt), host="127.0.0.1", port=args.port,
+    web.run_app(make_app(args.token, args.upstream, stt, args.tunnel), host="127.0.0.1", port=args.port,
                 access_log=None, print=None)
 
 

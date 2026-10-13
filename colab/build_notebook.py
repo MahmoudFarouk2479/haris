@@ -121,7 +121,8 @@ TOKEN = secret("HARIS_TOKEN")
 NEW_TOKEN = not TOKEN
 if NEW_TOKEN:
     TOKEN = secrets.token_urlsafe(32)
-proxy_proc = subprocess.Popen([sys.executable, "/content/haris_proxy.py", "--port", "8000"],
+TUNNEL = "ngrok" if secret("NGROK_AUTHTOKEN") else "cloudflare"   # the same choice step 6 makes
+proxy_proc = subprocess.Popen([sys.executable, "/content/haris_proxy.py", "--port", "8000", "--tunnel", TUNNEL],
                               env={**os.environ, "HARIS_PROXY_TOKEN": TOKEN,
                                    "HARIS_STT_MODEL": STT_MODEL, "HARIS_STT_CACHE": WHISPER_DIR},
                               stdout=open("/content/proxy.log", "w"), stderr=subprocess.STDOUT)
