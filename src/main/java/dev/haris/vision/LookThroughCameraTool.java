@@ -31,6 +31,11 @@ public class LookThroughCameraTool implements Tool {
     }
 
     @Override
+    public boolean readsOutsideContent() {
+        return true;   // the camera can see text held up by anyone
+    }
+
+    @Override
     public String description() {
         return "Take one photo with the webcam to see the user or something they hold up. The user approves each photo.";
     }

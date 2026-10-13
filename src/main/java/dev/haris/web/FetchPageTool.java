@@ -29,6 +29,11 @@ public class FetchPageTool implements Tool {
     }
 
     @Override
+    public boolean readsOutsideContent() {
+        return true;   // the page, and any error the server provokes, are written by the site
+    }
+
+    @Override
     public String description() {
         return "Read the text of a public web page (an article, documentation, a search result).";
     }

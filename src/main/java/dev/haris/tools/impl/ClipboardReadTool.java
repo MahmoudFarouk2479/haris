@@ -26,6 +26,11 @@ public class ClipboardReadTool implements Tool {
     }
 
     @Override
+    public boolean readsOutsideContent() {
+        return true;   // the clipboard holds whatever was copied, from anywhere
+    }
+
+    @Override
     public String description() {
         return "Read the text currently on the clipboard (to translate, summarise, explain or fix it).";
     }

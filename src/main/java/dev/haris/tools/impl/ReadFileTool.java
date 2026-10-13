@@ -43,6 +43,11 @@ public class ReadFileTool implements Tool {
     }
 
     @Override
+    public boolean readsOutsideContent() {
+        return true;   // a file's text can be written by anyone
+    }
+
+    @Override
     public String description() {
         return "Read a text file (txt, md, csv, json, code…) from a granted folder, up to 256 KB.";
     }

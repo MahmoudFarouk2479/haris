@@ -28,6 +28,11 @@ public class ListAppsTool implements Tool {
     }
 
     @Override
+    public boolean readsOutsideContent() {
+        return true;   // app names are chosen by their installers
+    }
+
+    @Override
     public String description() {
         return "List installed apps from the Start menu, optionally filtered by a search term.";
     }

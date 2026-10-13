@@ -42,6 +42,11 @@ public class SearchFilesTool implements Tool {
     }
 
     @Override
+    public boolean readsOutsideContent() {
+        return true;   // matching paths carry names chosen by whoever created the files
+    }
+
+    @Override
     public String description() {
         return "Find files or folders whose name contains the given text, inside the granted folders.";
     }

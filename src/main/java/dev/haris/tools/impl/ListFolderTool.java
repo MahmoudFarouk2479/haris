@@ -41,6 +41,11 @@ public class ListFolderTool implements Tool {
     }
 
     @Override
+    public boolean readsOutsideContent() {
+        return true;   // file and folder names are chosen by whoever created them (downloads, shares, archives)
+    }
+
+    @Override
     public String description() {
         return "List the contents of a granted folder. Without a path, lists the granted folders themselves.";
     }

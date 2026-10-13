@@ -47,6 +47,11 @@ public class WeatherTool implements Tool {
     }
 
     @Override
+    public boolean readsOutsideContent() {
+        return true;   // place names and conditions come from a remote service
+    }
+
+    @Override
     public String description() {
         return "Current weather and a 3-day forecast for a city (defaults to the user's home city).";
     }

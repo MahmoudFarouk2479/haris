@@ -32,6 +32,11 @@ public class WebSearchTool implements Tool {
     }
 
     @Override
+    public boolean readsOutsideContent() {
+        return true;   // titles and snippets are written by the sites
+    }
+
+    @Override
     public String description() {
         return "Search the web (news, facts, prices, how-to). Returns titles, links and snippets; "
                 + "use fetch_page to read a result in full.";

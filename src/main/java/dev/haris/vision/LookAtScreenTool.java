@@ -42,6 +42,11 @@ public class LookAtScreenTool implements CapturingTool {
     }
 
     @Override
+    public boolean readsOutsideContent() {
+        return true;   // the screen can show text planted by anyone
+    }
+
+    @Override
     public String description() {
         return "Take one screenshot to see what is on the user's screen (an error, a page, a document). "
                 + "The user previews and approves every screenshot.";
