@@ -62,8 +62,27 @@ public class FetchPageTool implements Tool {
             return ToolOutcome.untrusted(header + (page.text().isBlank() ? "(the page has no readable text)" : page.text()));
         } catch (NetGuard.BlockedException e) {
             throw new ToolException(e.getMessage());
-        } catch (IOException e) {
+        } catch (PageFetcher.FetchException e) {
             throw new ToolException("Could not read the page: " + e.getMessage());
+        } catch (IOException e) {
+            // Library messages can quote what the server sent; describe the failure in our own words.
+            throw new ToolException("Could not read the page: " + describe(e));
         }
+    }
+
+    static String describe(IOException e) {
+        if (e instanceof java.net.ProtocolException) {
+            return "the server sent an invalid response.";
+        }
+        if (e instanceof java.net.UnknownHostException) {
+            return "the site's address could not be found, or it points into a private network.";
+        }
+        if (e instanceof java.io.InterruptedIOException) {
+            return "the site took too long to answer.";
+        }
+        if (e instanceof javax.net.ssl.SSLException) {
+            return "the secure connection failed.";
+        }
+        return "the connection failed.";
     }
 }

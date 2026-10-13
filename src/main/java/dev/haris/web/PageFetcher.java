@@ -40,6 +40,13 @@ public class PageFetcher {
 
     public record Page(String url, String title, String text) {}
 
+    /** A failure whose message Haris wrote itself, so it is safe to show the model as it is. */
+    static final class FetchException extends IOException {
+        FetchException(String message) {
+            super(message);
+        }
+    }
+
     private static final int MAX_BYTES = 2 * 1024 * 1024;
     private static final int MAX_TEXT = 15_000;
     private static final int MAX_REDIRECTS = 3;
@@ -80,19 +87,19 @@ public class PageFetcher {
                 if (res.isRedirect()) {
                     String location = res.header("Location");
                     if (location == null) {
-                        throw new IOException("Redirect without a target.");
+                        throw new FetchException("Redirect without a target.");
                     }
                     uri = NetGuard.checkUrl(uri.resolve(location).toString());
                     continue;
                 }
                 if (!res.isSuccessful()) {
-                    throw new IOException("The site answered HTTP " + res.code() + ".");
+                    throw new FetchException("The site answered HTTP " + res.code() + ".");
                 }
                 ResponseBody body = res.body();
                 MediaType type = body == null ? null : body.contentType();
                 String subtype = type == null ? "" : (type.type() + "/" + type.subtype()).toLowerCase(Locale.ROOT);
                 if (!subtype.equals("text/html") && !subtype.equals("application/xhtml+xml") && !subtype.equals("text/plain")) {
-                    throw new IOException("That link is not a web page (" + (subtype.isEmpty() ? "unknown type" : subtype) + ").");
+                    throw new FetchException("That link is not a web page (" + (subtype.isEmpty() ? "unknown type" : subtype) + ").");
                 }
                 byte[] bytes = readLimited(body.byteStream());
                 Charset charset = type.charset(StandardCharsets.UTF_8);
@@ -102,7 +109,7 @@ public class PageFetcher {
                         : readable(uri.toString(), content);
             }
         }
-        throw new IOException("Too many redirects.");
+        throw new FetchException("Too many redirects.");
     }
 
     static Page readable(String url, String html) {
