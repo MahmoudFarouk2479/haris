@@ -31,6 +31,8 @@ public class VoiceController {
     /** 30 seconds of 16 kHz 16-bit mono audio. */
     public static final int MAX_AUDIO_BYTES = 30 * VoiceEngines.RATE * 2;
     private static final int MAX_SPEAK_CHARS = 1500;
+    /** Raw text above this is refused before any pattern runs: cleaning only ever shortens text. */
+    private static final int MAX_RAW_SPEAK_CHARS = MAX_SPEAK_CHARS * 4;
     /** Docker can take most of a minute to bring the engines up after Haris starts. */
     private static final Duration STARTUP_WAIT = Duration.ofSeconds(90);
     private static final Pattern ARABIC = Pattern.compile("[\\u0600-\\u06FF]");
@@ -98,7 +100,11 @@ public class VoiceController {
 
     @PostMapping(value = "/speak", produces = "audio/wav")
     public ResponseEntity<byte[]> speak(@RequestBody SpeakRequest request) {
-        String text = clean(request.text());
+        String raw = request.text();
+        if (raw == null || raw.length() > MAX_RAW_SPEAK_CHARS) {
+            return ResponseEntity.badRequest().build();
+        }
+        String text = clean(raw);
         // Nothing pronounceable (only emoji or symbols) makes Piper fail; skip it quietly.
         if (text.isEmpty() || text.length() > MAX_SPEAK_CHARS || !SPEAKABLE.matcher(text).find()) {
             return ResponseEntity.badRequest().build();
@@ -121,9 +127,11 @@ public class VoiceController {
         }
         return text
                 .replaceAll("```[\\s\\S]*?```", " (code omitted) ")
+                // Links become their label before bare URLs are replaced (which would eat the ")").
+                // Bounded on both sides, so a long run of "[](" cannot make the engine backtrack for minutes.
+                .replaceAll("\\[([^\\]\\n]{0,200})]\\([^)\\n]{0,500}\\)", "$1")
                 .replaceAll("https?://\\S+", " link ")
                 .replaceAll("[*_#`>|~]+", " ")
-                .replaceAll("\\[(.*?)]\\(.*?\\)", "$1")
                 .replaceAll("\\s+", " ")
                 .strip();
     }
