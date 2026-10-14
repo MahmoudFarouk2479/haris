@@ -7,6 +7,8 @@ import jakarta.validation.Valid;
 import dev.haris.llm.ProviderFactory;
 import dev.haris.security.SecretStore;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -78,5 +80,13 @@ public class SettingsController {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>> badRequest(IllegalArgumentException e) {
         return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+    }
+
+    /** A field the annotations refuse (e.g. uiLanguage "fr"): say which one, never echo the value. */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, String>> invalidField(MethodArgumentNotValidException e) {
+        FieldError field = e.getBindingResult().getFieldError();
+        String message = field == null ? "Invalid settings." : "Invalid value for " + field.getField() + ".";
+        return ResponseEntity.badRequest().body(Map.of("error", message));
     }
 }

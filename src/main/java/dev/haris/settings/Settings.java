@@ -138,6 +138,14 @@ public record Settings(
                 morningBriefing, startWithWindows, colabBaseUrl, colabModel, replyLanguage, voiceFollowUp, colabStt, ttsEngine, geminiVoice, uiLanguage);
     }
 
+    /** A copy with the HUD's language replaced (used to tell a language switch from a rule change). */
+    public Settings withUiLanguage(String language) {
+        return new Settings(assistantName, userName, provider, anthropicModel, anthropicEffort, webSearch,
+                ollamaBaseUrl, ollamaModel, lmStudioBaseUrl, lmStudioModel, openAiBaseUrl, openAiModel,
+                allowedFolders, homeCity, voiceReplies, voiceWake, sttLanguage, voiceEnglish, voiceArabic,
+                morningBriefing, startWithWindows, colabBaseUrl, colabModel, replyLanguage, voiceFollowUp, colabStt, ttsEngine, geminiVoice, language);
+    }
+
     private static List<String> defaultFolders() {
         Path home = Path.of(System.getProperty("user.home"));
         return Stream.of("Desktop", "Documents", "Downloads")

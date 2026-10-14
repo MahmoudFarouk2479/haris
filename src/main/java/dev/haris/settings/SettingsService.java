@@ -26,8 +26,17 @@ public class SettingsService {
 
     private static final Logger log = LoggerFactory.getLogger(SettingsService.class);
 
-    /** Published after every successful save; the conversation restarts so the model sees the new rules. */
-    public record SettingsChanged(Settings settings) {}
+    /**
+     * Published after every successful save. The conversation restarts so the model sees the new
+     * rules, unless only the HUD's own language changed (or nothing did).
+     */
+    public record SettingsChanged(Settings previous, Settings settings) {
+
+        /** Only the HUD's own language changed (or nothing did): the model's rules are the same. */
+        public boolean sameRules() {
+            return previous != null && previous.withUiLanguage(settings.uiLanguage()).equals(settings);
+        }
+    }
 
     private final JsonMapper json;
     private final ApplicationEventPublisher events;
@@ -51,6 +60,7 @@ public class SettingsService {
     }
 
     public synchronized Settings update(Settings requested) {
+        Settings previous = current;
         Settings next = normalize(requested.withDefaults());
         try {
             Files.createDirectories(file.getParent());
@@ -61,7 +71,7 @@ public class SettingsService {
             throw new IllegalStateException("Could not save settings", e);
         }
         current = next;
-        events.publishEvent(new SettingsChanged(next));
+        events.publishEvent(new SettingsChanged(previous, next));
         return next;
     }
 
