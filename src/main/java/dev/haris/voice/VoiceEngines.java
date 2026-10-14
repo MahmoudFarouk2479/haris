@@ -136,6 +136,11 @@ public class VoiceEngines {
         return s;
     }
 
+    /** True when the speech-to-text engine answers a Wyoming "describe" (its model is loaded). */
+    public boolean sttReady() {
+        return describe(sttPort) != null;
+    }
+
     private JsonNode describe(int port) {
         try (WyomingClient c = new WyomingClient(port, 1500, json)) {
             c.send("describe", Map.of());

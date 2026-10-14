@@ -145,6 +145,7 @@ async function refreshVoiceStatus() {
       $('voice-stt').classList.remove('off');
     } else {
       mark('voice-stt', s.stt);
+      if (s.stt && s.sttDevice === 'gpu') $('voice-stt').textContent = t('voice.onlineGpu');
     }
     if (s.ttsRoute === 'gemini') {
       $('voice-tts').textContent = s.tts ? t('voice.geminiBackup') : t('voice.gemini');
