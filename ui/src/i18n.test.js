@@ -100,3 +100,12 @@ test("every literal t('…') key main.js uses exists", () => {
     assert.ok(STRINGS.en[key], `main.js uses missing key ${key}`);
   }
 });
+
+test('every key main.js passes to setLabel exists', () => {
+  const js = readFileSync(new URL('./main.js', import.meta.url), 'utf8');
+  const calls = [...js.matchAll(/\bsetLabel\(\$\('[^']+'\),([^;]+)\);/g)];
+  assert.ok(calls.length >= 4, 'the session, mic and autostart labels keep their keys');
+  for (const [, args] of calls) {
+    for (const [, key] of args.matchAll(/'([^']+)'/g)) assert.ok(STRINGS.en[key], `main.js uses missing key ${key}`);
+  }
+});

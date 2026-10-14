@@ -10,10 +10,18 @@ import { api, hasToken, streamChat, subscribeEvents } from './api.js';
 import { createEmblem } from './emblem.js';
 import { mountDrawers } from './drawers.js';
 import { applyLanguage, brandFor, locale, speakerFor, t } from './i18n.js';
+import { sameRules } from './settingsDiff.js';
 import { SentenceSplitter, Voice } from './voice.js';
 import { takePhoto } from './camera.js';
 
 const $ = (id) => document.getElementById(id);
+
+/** Writes a translated label and keeps its key, so applyLanguage re-renders it after a switch. */
+function setLabel(el, key) {
+  el.dataset.i18n = key;
+  el.textContent = t(key);
+}
+
 const emblem = createEmblem($('emblem'));
 const drawers = mountDrawers();
 
@@ -43,7 +51,7 @@ const voice = new Voice({
   onMicState: ({ open, recording, wake }) => {
     $('mic-badge').hidden = !open;
     $('mic-badge').classList.toggle('rec', recording);
-    $('mic-label').textContent = recording ? t('mic.recording') : wake ? t('mic.wake') : t('mic.on');
+    setLabel($('mic-label'), recording ? 'mic.recording' : wake ? 'mic.wake' : 'mic.on');
     $('mic').classList.toggle('active', recording);
     if (!recording && document.body.dataset.state === 'listening') setState('transcribing');
   },
@@ -385,6 +393,12 @@ function flash() {
   f.classList.add('on');
 }
 
+/** Characters per second of the last reply; null until there is one. */
+let lastThroughput = null;
+function renderThroughput() {
+  $('throughput').textContent = lastThroughput === null ? '—' : t('sys.charsPerSec', { n: lastThroughput });
+}
+
 async function send(text, { label } = {}) {
   if (busy || !text.trim()) return;
   busy = true;
@@ -448,7 +462,8 @@ async function send(text, { label } = {}) {
     done: () => {
       speaker?.flush();
       const secs = (performance.now() - (firstAt || started)) / 1000;
-      $('throughput').textContent = chars && secs > 0 ? t('sys.charsPerSec', { n: Math.round(chars / secs) }) : '—';
+      lastThroughput = chars && secs > 0 ? Math.round(chars / secs) : null;
+      renderThroughput();
       setState(voice.speaking ? 'speaking' : 'idle');
     },
     error: ({ message }) => {
@@ -614,6 +629,7 @@ function applyUi(s) {
   tickClock();
   setContext(externalNow);
   renderKeyStates();
+  renderThroughput();
   refreshVoiceStatus();
   refreshActivity();
 }
@@ -628,25 +644,36 @@ form.elements.provider.addEventListener('change', showProviderFields);
 
 async function saveSettings() {
   $('settings-error').textContent = '';
+  const before = settingsCache;   // as the core last returned it, like the PUT's answer below
   const body = Object.fromEntries(TEXT_FIELDS.map((f) => [f, form.elements[f].value.trim()]));
   for (const f of CHECK_FIELDS) body[f] = form.elements[f].checked;
   body.allowedFolders = form.elements.allowedFolders.value.split('\n').map((l) => l.trim()).filter(Boolean);
   try {
     let view = await api('/api/settings', { method: 'PUT', body });
+    let keysEntered = false;
     const keys = [['anthropicKey', 'anthropic'], ['openAiKey', 'openai-compatible'], ['colabKey', 'colab'], ['geminiKey', 'gemini']];
     for (const [field, name] of keys) {
       const value = form.elements[field].value.trim();
       if (value) {
         view = await api(`/api/secrets/${name}`, { method: 'PUT', body: { value } });
         form.elements[field].value = '';
+        keysEntered = true;
       }
     }
+    // Only the interface language changed (or nothing): the core kept its conversation, so the
+    // transcript and the outside-content warning stay too. A new key still starts afresh, as before.
+    const rulesKept = sameRules(before, view.settings);
+    if (rulesKept && keysEntered) await api('/api/chat/reset', { method: 'POST' });
     fillSettings(view);
     applyVoiceSettings(view.settings);
-    transcript.replaceChildren();
-    toolLines.clear();
-    setContext(false);
-    addMessage('notice', t('msg.settingsSaved'));
+    if (rulesKept && !keysEntered) {
+      addMessage('notice', t('msg.uiSaved'));
+    } else {
+      transcript.replaceChildren();
+      toolLines.clear();
+      setContext(false);
+      addMessage('notice', t('msg.settingsSaved'));
+    }
     return true;
   } catch (e) {
     $('settings-error').textContent = e.message;
@@ -677,7 +704,7 @@ $('open-settings').addEventListener('click', async () => {
   $('settings-error').textContent = '';
   const auto = await api('/api/system/autostart').catch(() => ({ available: false }));
   form.elements.startWithWindows.disabled = !auto.available;
-  $('autostart-hint').textContent = auto.available ? t('settings.autostartOn') : t('settings.autostartOff');
+  setLabel($('autostart-hint'), auto.available ? 'settings.autostartOn' : 'settings.autostartOff');
   dialog.showModal();
   loadModels();
 });
@@ -761,12 +788,12 @@ async function start() {
   $('endpoint').textContent = `127.0.0.1:${location.port}`;
 
   if (!hasToken()) {
-    $('session').textContent = t('sec.notAuthorised');
+    setLabel($('session'), 'sec.notAuthorised');
     addMessage('error', t('msg.noToken'));
     setState('error');
     return;
   }
-  $('session').textContent = t('sec.verified');
+  setLabel($('session'), 'sec.verified');
 
   try {
     const view = await api('/api/settings');
@@ -779,7 +806,6 @@ async function start() {
   } catch (e) {
     addMessage('error', e.message);
   }
-  $('session').textContent = t('sec.verified');
 
   refreshSystem();
   refreshActivity();
