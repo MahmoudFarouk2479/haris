@@ -29,6 +29,12 @@ if ($RemoveData) {
                 $gpu = Join-Path (Split-Path $f) 'compose.gpu.yaml'   # declares the GPU model volume
                 if (Test-Path $gpu) { $files += @('-f', $gpu) }
                 docker compose @files down --volumes 2>$null | Out-Null
+                if ($LASTEXITCODE -ne 0 -and $files.Count -gt 2) {
+                    # Docker Compose older than 2.24.4 cannot read the GPU file ("!override"): remove
+                    # the voice project with compose.yaml alone, then the GPU model volume by name.
+                    docker compose -f $f down --volumes 2>$null | Out-Null
+                    docker volume rm haris-voice_whisper-gpu-data 2>$null | Out-Null
+                }
             }
         }
     }

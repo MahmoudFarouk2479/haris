@@ -148,7 +148,12 @@ except the GPU device, the image and a 3 GB memory cap (see the comments in that
 container does not answer, Haris falls back to the CPU container by itself; the Voice drawer shows
 **● Online (GPU)** when the GPU is in use. Set `HARIS_WHISPER_GPU=false` (environment variable, or a line in
 `voice/.env`) to always use the CPU. On an MX450 (2 GB) a short phrase transcribes in ~1.0 s on the
-GPU versus ~1.5 s on the CPU, using ~0.4 GB of video memory.
+GPU versus ~1.5 s on the CPU, using ~0.4 GB of video memory. The GPU image is several GB: on the
+first launch Haris starts on the CPU at once and downloads it in the background (progress is in the
+log; a download cut short continues at the next start), then uses the GPU from the next start. If
+the GPU container fails, Haris stays on the CPU for three days (delete `~/.haris/whisper-gpu-failed`
+to retry sooner). The GPU file needs Docker Compose 2.24.4 or later; older versions use the CPU.
+`WHISPER_OFFLINE=true` applies to the GPU container too.
 
 **Speed.** On a laptop CPU a voice turn takes several seconds: Whisper ~3–4 s, the first spoken
 sentence ~1.5–2.5 s, plus the model. Faster options: Colab speech-to-text, a smaller Whisper

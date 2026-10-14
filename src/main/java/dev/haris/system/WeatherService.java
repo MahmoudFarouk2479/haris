@@ -138,9 +138,19 @@ public class WeatherService {
         }
     }
 
+    /**
+     * The request timeout covers only the wait for the headers, so the whole exchange (body included)
+     * is bounded here too: a server that stalls mid-body cannot hold the caller's thread.
+     */
     private static Response httpGet(String url, Duration timeout) throws IOException, InterruptedException {
-        HttpResponse<String> res = HTTP.send(HttpRequest.newBuilder(URI.create(url)).timeout(timeout).GET().build(),
-                HttpResponse.BodyHandlers.ofString());
-        return new Response(res.statusCode(), res.body());
+        java.util.concurrent.CompletableFuture<HttpResponse<String>> call = HTTP.sendAsync(
+                HttpRequest.newBuilder(URI.create(url)).timeout(timeout).GET().build(), HttpResponse.BodyHandlers.ofString());
+        try {
+            HttpResponse<String> res = call.get(timeout.toMillis() + 1000, java.util.concurrent.TimeUnit.MILLISECONDS);
+            return new Response(res.statusCode(), res.body());
+        } catch (java.util.concurrent.TimeoutException | java.util.concurrent.ExecutionException e) {
+            call.cancel(true);
+            throw new IOException("weather request failed", e);
+        }
     }
 }
