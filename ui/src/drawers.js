@@ -79,6 +79,8 @@ export function mountDrawers({ doc = document, win = window, storageKey = 'haris
     }
     const pinned = isPinned(state, width());
     doc.body.classList.toggle('drawer-pinned', pinned);
+    // Any open drawer (CSS decides from the window width whether it pushes the stage or floats).
+    doc.body.classList.toggle('drawer-open', Boolean(state.open));
     doc.body.classList.toggle('can-pin', canPin(width()));
     for (const b of doc.querySelectorAll('[data-pin]')) b.setAttribute('aria-pressed', String(pinned));
     if (state.open) waiting = null;

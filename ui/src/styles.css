@@ -574,6 +574,17 @@ html[lang='ar'] .confirm h2 { letter-spacing: 0; font-size: 1.05rem; }
    body.chat-side, and body.chat-hidden when the user hid it). Narrower windows keep the stacked layout. */
 @media (min-width: 1200px) {
   :root { --chat-w: clamp(22rem, 30vw, 36rem); }
+
+  /* Any open drawer (pinned or not) takes its place between the rail and the stage, so the stage
+     (emblem + conversation column) shrinks and the star re-centres instead of sitting under it. */
+  body.drawer-open .drawer:not([hidden]) {
+    position: relative;
+    top: auto;
+    inset-inline-start: auto;
+    height: 100%;
+    box-shadow: none;
+    animation: none;
+  }
   body.chat-side #emblem { width: clamp(9rem, 60vmin, 44rem); }
 
   body.chat-side:not(.chat-hidden) .stage {
@@ -602,6 +613,11 @@ html[lang='ar'] .confirm h2 { letter-spacing: 0; font-size: 1.05rem; }
   body.chat-hidden .console { width: min(44rem, 90%); }
   body.chat-hidden #emblem { width: clamp(9rem, 66vmin, 48rem); }
   body.chat-hidden .chat-tab:not([hidden]) { display: flex; }
+}
+/* 1200-1599 px with a drawer open: a slightly narrower column keeps room for the star
+   (1200 px: rail 58 + drawer 240 + column 336 leaves ~566 px for the emblem area). */
+@media (min-width: 1200px) and (max-width: 1599px) {
+  body.drawer-open { --chat-w: clamp(20rem, 28vw, 36rem); }
 }
 /* A narrow column: the text box gets its own row, the buttons go underneath at the end. */
 @container chat (max-width: 30rem) {
