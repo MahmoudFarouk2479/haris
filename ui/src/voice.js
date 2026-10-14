@@ -9,6 +9,7 @@
 //     it, to their own Colab notebook behind its access token); nothing is stored;
 //   * the HUD shows a live indicator whenever the microphone is open.
 import { postBinary, postForAudio, sessionToken } from './api.js';
+import { SpeechQueue } from './speechQueue.js';
 
 const SPEECH_RMS = 0.025;        // above this a frame counts as speech
 const END_SILENCE_MS = 600;      // this much quiet after speech ends a recording
@@ -33,6 +34,14 @@ export class Voice {
     this.queue = [];
     this.out = null;
     this.current = null;
+    // One speech request at a time; sentences that arrive meanwhile are sent together.
+    this.speech = new SpeechQueue(
+      (text) => postForAudio('/api/voice/speak', { text }),
+      (audio) => {
+        this.queue.push(audio);
+        if (!this.speaking) this.playNext();
+      },
+    );
   }
 
   get micOpen() {
@@ -185,13 +194,9 @@ export class Voice {
 
   // ── Speech output ──────────────────────────────────────────────────────
 
-  /** Queues one sentence; sentences are fetched as they arrive and played in order. */
+  /** Queues one sentence; it is fetched (alone or with the ones after it) and played in order. */
   speak(text) {
-    const clean = text.trim();
-    if (!clean) return;
-    const audio = postForAudio('/api/voice/speak', { text: clean }).catch(() => null);
-    this.queue.push(audio);
-    if (!this.speaking) this.playNext();
+    this.speech.push(text);
   }
 
   async playNext() {
@@ -274,6 +279,7 @@ export class Voice {
 
   /** Barge-in: the user started talking, so Haris stops. */
   stopSpeaking() {
+    this.speech.clear();
     this.queue.length = 0;
     const src = this.current;
     this.current = null;

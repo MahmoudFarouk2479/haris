@@ -105,6 +105,52 @@ class GeminiSpeechTest {
                 .isInstanceOf(IOException.class).hasMessageContaining("302");
     }
 
+    private GeminiSpeech limited(String header, String body) {
+        server.createContext("/limited/v1beta/interactions", exchange -> {
+            exchange.getRequestBody().readAllBytes();
+            if (header != null) {
+                exchange.getResponseHeaders().add("Retry-After", header);
+            }
+            byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(429, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.close();
+        });
+        dev.haris.settings.SettingsService settings = org.mockito.Mockito.mock(dev.haris.settings.SettingsService.class);
+        dev.haris.settings.Settings d = dev.haris.settings.Settings.defaults();
+        org.mockito.Mockito.when(settings.get()).thenReturn(d);
+        return new GeminiSpeech(settings, org.mockito.Mockito.mock(dev.haris.security.SecretStore.class), json,
+                endpoint("/limited"));
+    }
+
+    @Test
+    void aRateLimitPausesGeminiForAsLongAsGoogleAsks() {
+        GeminiSpeech speech = limited("120", "{}");
+        long before = System.currentTimeMillis();
+        assertThatThrownBy(() -> speech.speak(KEY, "Hi.")).isInstanceOf(IOException.class).hasMessageContaining("429");
+        assertThat(speech.pausedUntil() - before).isGreaterThanOrEqualTo(119_000);
+    }
+
+    @Test
+    void theRetryDelayInTheErrorBodyIsHonouredToo() {
+        GeminiSpeech speech = limited(null,
+                "{\"error\":{\"code\":429,\"details\":[{\"@type\":\"type.googleapis.com/google.rpc.RetryInfo\",\"retryDelay\":\"90s\"}]}}");
+        long before = System.currentTimeMillis();
+        assertThatThrownBy(() -> speech.speak(KEY, "Hi.")).isInstanceOf(IOException.class);
+        assertThat(speech.pausedUntil() - before).isBetween(89_000L, 95_000L);
+    }
+
+    @Test
+    void anyOtherFailurePausesForAMinute() {
+        dev.haris.settings.SettingsService settings = org.mockito.Mockito.mock(dev.haris.settings.SettingsService.class);
+        org.mockito.Mockito.when(settings.get()).thenReturn(dev.haris.settings.Settings.defaults());
+        GeminiSpeech speech = new GeminiSpeech(settings, org.mockito.Mockito.mock(dev.haris.security.SecretStore.class),
+                json, endpoint(""));
+        long before = System.currentTimeMillis();
+        assertThatThrownBy(() -> speech.speak("wrong", "Hi.")).isInstanceOf(IOException.class);
+        assertThat(speech.pausedUntil() - before).isBetween(59_000L, 65_000L);
+    }
+
     @Test
     void onlyKnownVoicesAreAccepted() {
         assertThat(GeminiSpeech.VOICES).contains("Charon", "Kore", "Puck").hasSize(30);

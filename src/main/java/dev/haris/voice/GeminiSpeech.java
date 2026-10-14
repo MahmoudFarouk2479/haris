@@ -43,6 +43,7 @@ public class GeminiSpeech {
 
     private static final int RATE = 24_000;
     private static final long COOL_DOWN_MS = 60_000;
+    private static final Pattern RETRY_DELAY = Pattern.compile("\"retryDelay\"\\s*:\\s*\"(\\d+)(?:\\.\\d+)?s\"");
     private static final Pattern ARABIC = Pattern.compile("[\\u0600-\\u06FF]");
     private static final HttpClient HTTP = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
@@ -52,12 +53,34 @@ public class GeminiSpeech {
     private final SettingsService settings;
     private final SecretStore secrets;
     private final JsonMapper json;
-    private volatile long failedAt;
+    private final URI endpoint;
+    /** Gemini is skipped (Piper speaks) until this time, after a failure or a rate limit. */
+    private volatile long pausedUntil;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public GeminiSpeech(SettingsService settings, SecretStore secrets, JsonMapper json) {
+        this(settings, secrets, json, ENDPOINT);
+    }
+
+    GeminiSpeech(SettingsService settings, SecretStore secrets, JsonMapper json, URI endpoint) {
         this.settings = settings;
         this.secrets = secrets;
         this.json = json;
+        this.endpoint = endpoint;
+    }
+
+    /** Thrown for HTTP 429; carries how long Google asked us to wait. */
+    static final class RateLimited extends IOException {
+        final long retryAfterSeconds;
+
+        RateLimited(long retryAfterSeconds) {
+            super("Gemini speech answered HTTP 429 (rate limit; retry in " + retryAfterSeconds + " s)");
+            this.retryAfterSeconds = retryAfterSeconds;
+        }
+    }
+
+    long pausedUntil() {
+        return pausedUntil;
     }
 
     /** True when the user chose Gemini for spoken replies and saved a key (the route the HUD shows). */
@@ -67,7 +90,7 @@ public class GeminiSpeech {
 
     /** The key to use now, or empty when Piper should speak (not chosen, no key, or cooling down). */
     public Optional<String> available() {
-        if (!"gemini".equals(settings.get().ttsEngine()) || System.currentTimeMillis() - failedAt < COOL_DOWN_MS) {
+        if (!"gemini".equals(settings.get().ttsEngine()) || System.currentTimeMillis() < pausedUntil) {
             return Optional.empty();
         }
         return secrets.get(SecretStore.GEMINI);
@@ -78,11 +101,14 @@ public class GeminiSpeech {
         Settings s = settings.get();
         String voice = VOICES.contains(s.geminiVoice()) ? s.geminiVoice() : "Charon";
         try {
-            byte[] wav = synthesize(ENDPOINT, key, MODEL, text, voice, json);
-            failedAt = 0;
+            byte[] wav = synthesize(endpoint, key, MODEL, text, voice, json);
+            pausedUntil = 0;
             return wav;
+        } catch (RateLimited e) {
+            pausedUntil = System.currentTimeMillis() + Math.max(COOL_DOWN_MS, e.retryAfterSeconds * 1000);
+            throw e;
         } catch (IOException e) {
-            failedAt = System.currentTimeMillis();
+            pausedUntil = System.currentTimeMillis() + COOL_DOWN_MS;
             throw e;
         }
     }
@@ -113,6 +139,9 @@ public class GeminiSpeech {
             Thread.currentThread().interrupt();
             throw new IOException("Interrupted.");
         }
+        if (response.statusCode() == 429) {
+            throw new RateLimited(retryAfter(response));
+        }
         if (response.statusCode() != 200) {
             // The status only: an error body could echo the key or the text back into the log.
             throw new IOException("Gemini speech answered HTTP " + response.statusCode());
@@ -138,6 +167,16 @@ public class GeminiSpeech {
         }
         boolean riff = audio.length >= 4 && new String(audio, 0, 4, StandardCharsets.US_ASCII).equals("RIFF");
         return riff ? audio : wav(audio, RATE);
+    }
+
+    /** Seconds Google asked us to wait: the Retry-After header, or RetryInfo.retryDelay in the body. */
+    static long retryAfter(HttpResponse<byte[]> response) {
+        var header = response.headers().firstValue("Retry-After");
+        if (header.isPresent() && header.get().strip().matches("\\d{1,6}")) {
+            return Long.parseLong(header.get().strip());
+        }
+        var m = RETRY_DELAY.matcher(new String(response.body(), StandardCharsets.UTF_8));
+        return m.find() ? Math.min(Long.parseLong(m.group(1)), 86_400) : COOL_DOWN_MS / 1000;
     }
 
     /** Wraps 16-bit mono little-endian PCM in a WAV header. */

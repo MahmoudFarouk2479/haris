@@ -21,6 +21,7 @@ $version = $pom.project.version
 Write-Host ">> Building HUD..." -ForegroundColor Cyan
 Push-Location ui
 if (-not (Test-Path node_modules)) { npm ci }
+if (-not $SkipTests) { npm test; if ($LASTEXITCODE) { throw 'HUD tests failed' } }
 npm run build
 if ($LASTEXITCODE) { throw 'HUD build failed' }
 Pop-Location
