@@ -1,16 +1,13 @@
 package dev.haris.tools.impl;
 
-import java.net.URI;
-import java.net.URLEncoder;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
 import dev.haris.settings.SettingsService;
+import dev.haris.system.WeatherService;
+import dev.haris.system.WeatherService.Place;
+import dev.haris.system.WeatherService.WeatherException;
 import dev.haris.tools.Args;
 import dev.haris.tools.Schema;
 import dev.haris.tools.Tool;
@@ -19,7 +16,6 @@ import dev.haris.tools.ToolOutcome;
 import org.springframework.stereotype.Component;
 
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Weather from Open-Meteo: free, no account, no API key, no tracking. Only the city name
@@ -28,17 +24,14 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 public class WeatherTool implements Tool {
 
-    private static final HttpClient HTTP = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .followRedirects(HttpClient.Redirect.NEVER)
-            .build();
+    private static final Duration TIMEOUT = Duration.ofSeconds(8);
 
-    private final JsonMapper json;
     private final SettingsService settings;
+    private final WeatherService weather;
 
-    public WeatherTool(JsonMapper json, SettingsService settings) {
-        this.json = json;
+    public WeatherTool(SettingsService settings, WeatherService weather) {
         this.settings = settings;
+        this.weather = weather;
     }
 
     @Override
@@ -74,21 +67,22 @@ public class WeatherTool implements Tool {
     @Override
     public ToolOutcome run(JsonNode input) throws ToolException {
         String city = city(input);
-        JsonNode place = get("https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name="
-                + URLEncoder.encode(city, StandardCharsets.UTF_8)).path("results").path(0);
-        if (place.isMissingNode()) {
-            throw new ToolException("I could not find a place called " + city + ".");
+        Place place;
+        JsonNode w;
+        try {
+            place = weather.find(city, "en", TIMEOUT)
+                    .orElseThrow(() -> new ToolException("I could not find a place called " + city + "."));
+            w = weather.forecast(place,
+                    "current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m"
+                    + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
+                    + "&timezone=auto&forecast_days=3", TIMEOUT);
+        } catch (WeatherException e) {
+            throw new ToolException(e.getMessage());
         }
-        double lat = place.path("latitude").asDouble();
-        double lon = place.path("longitude").asDouble();
-        JsonNode w = get("https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon
-                + "&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m"
-                + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
-                + "&timezone=auto&forecast_days=3");
 
         JsonNode c = w.path("current");
         StringBuilder out = new StringBuilder();
-        out.append(place.path("name").asString()).append(", ").append(place.path("country").asString()).append('\n')
+        out.append(place.name()).append(", ").append(place.country()).append('\n')
                 .append("Now: ").append(describe(c.path("weather_code").asInt()))
                 .append(", ").append(c.path("temperature_2m").asDouble()).append("°C (feels ")
                 .append(c.path("apparent_temperature").asDouble()).append("°C), humidity ")
@@ -112,21 +106,6 @@ public class WeatherTool implements Tool {
             throw new ToolException("Which city? (You can also set a home city in Settings.)");
         }
         return city;
-    }
-
-    private JsonNode get(String url) throws ToolException {
-        try {
-            HttpResponse<String> res = HTTP.send(HttpRequest.newBuilder(URI.create(url))
-                    .timeout(Duration.ofSeconds(8)).GET().build(), HttpResponse.BodyHandlers.ofString());
-            if (res.statusCode() != 200) {
-                throw new ToolException("The weather service returned HTTP " + res.statusCode() + ".");
-            }
-            return json.readTree(res.body());
-        } catch (ToolException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ToolException("The weather service is unreachable.");
-        }
     }
 
     private static String describe(int code) {

@@ -25,9 +25,9 @@ public class BriefingService {
 
     static final String PROMPT = """
             Daily briefing, please. Greet me for the time of day and tell me today's date. Then, using your tools:
-            the weather in my home city (weather), my reminders for today (reminders, list), and three top news
-            headlines (one web_search; use only the result snippets, do not open pages). Finish with anything
-            from memory that matters today. Under 120 words, in the language I usually use with you.""";
+            my reminders for today (reminders, list) and three top news headlines (one web_search; use only the
+            result snippets, do not open pages). Finish with anything from memory that matters today. Under 120
+            words, in the language I usually use with you.""";
 
     private final SettingsService settings;
     private final ProviderFactory providers;
