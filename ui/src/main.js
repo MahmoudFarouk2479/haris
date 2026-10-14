@@ -12,6 +12,7 @@ import { mountDrawers } from './drawers.js';
 import { mountChatPanel } from './chatPanel.js';
 import { applyLanguage, brandFor, getLanguage, locale, speakerFor, t } from './i18n.js';
 import { composeStatusReport, firstNameOf, waitForEngines } from './statusReport.js';
+import { briefingQuietMs, deliverBriefing } from './briefing.js';
 import { sameRules } from './settingsDiff.js';
 import { SentenceSplitter, Voice } from './voice.js';
 import { takePhoto } from './camera.js';
@@ -337,6 +338,8 @@ let assistantName = 'Haris';
 let userName = '';
 let engineReady = false;
 let busy = false;
+/** Set once the user has typed or spoken a request this session (the daily briefing then waits for a lull). */
+let userHasSpoken = false;
 
 function addMessage(role, text = '') {
   const el = document.createElement('article');
@@ -410,6 +413,7 @@ function renderThroughput() {
 async function send(text, { label } = {}) {
   if (busy || !text.trim()) return;
   busy = true;
+  if (!label) userHasSpoken = true;
   $('send').disabled = true;
   addMessage('user', label ?? text);
   setState('thinking');
@@ -845,10 +849,7 @@ async function start() {
     $('open-settings').click();
     return;
   }
-  const [claim, briefing] = await Promise.all([
-    api('/api/greeting/claim', { method: 'POST' }).catch(() => null),
-    api('/api/briefing/claim', { method: 'POST' }).catch(() => null),
-  ]);
+  const claim = await api('/api/greeting/claim', { method: 'POST' }).catch(() => null);
   const firstName = firstNameOf(userName);
   const [report] = await Promise.all([claim?.full ? statusReport(firstName) : null, shown]);
   if (report) {
@@ -857,17 +858,21 @@ async function start() {
     const who = firstName ? t('greet.whoName', { name: firstName }) : t('greet.whoDefault');
     greet(t(`greet.${partOfDay()}`, { who }));
   }
-  if (briefing?.prompt) {
-    // send() silences Haris first, so let the greeting finish being spoken.
-    if (settingsCache?.voiceReplies !== false) await spoken();
-    send(briefing.prompt, { label: t('label.dailyBriefing') });
-  }
+  // The daily briefing (on its day) goes out at the first quiet moment: after the greeting has been
+  // spoken and never into a turn of the user's. It is claimed only then, so waiting never loses it.
+  deliverBriefing({
+    claim: () => api('/api/briefing/claim', { method: 'POST' }),
+    send: (prompt) => send(prompt, { label: t('label.dailyBriefing') }),
+    isIdle: pageIsIdle,
+    sleep,
+    quietMs: () => briefingQuietMs(userHasSpoken),
+  });
 }
 
-/** Resolves once queued speech has started and finished (or never started within a few seconds). */
-async function spoken() {
-  for (let i = 0; i < 25 && !voice.speaking; i++) await sleep(200);
-  for (let i = 0; i < 600 && voice.speaking; i++) await sleep(200);
+/** Nothing going on: no turn, no speech, no microphone, nothing typed, no dialog open. */
+function pageIsIdle() {
+  return !busy && !voice.speaking && !voice.recording && document.body.dataset.state === 'idle'
+    && !input.value.trim() && !document.querySelector('dialog[open]');
 }
 
 /**
