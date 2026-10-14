@@ -38,10 +38,11 @@ export function serializeDrawerState(state) {
   return state.open && state.pinned ? JSON.stringify({ pinned: state.open }) : '';
 }
 
-export function restoreDrawerState(raw) {
+/** A drawer pinned on a wider screen does not reopen as an overlay: it waits until there is room. */
+export function restoreDrawerState(raw, width = Infinity) {
   try {
     const value = JSON.parse(raw);
-    if (value && DRAWERS.includes(value.pinned)) return { open: value.pinned, pinned: true };
+    if (value && DRAWERS.includes(value.pinned) && canPin(width)) return { open: value.pinned, pinned: true };
   } catch {
     /* empty, blocked or garbage: start closed */
   }
@@ -55,12 +56,17 @@ export function escapeClosesDrawer(doc) {
 
 export function mountDrawers({ doc = document, win = window, storageKey = 'haris.drawer' } = {}) {
   const width = () => win.innerWidth;
-  let state = CLOSED;
+  let saved = null;
   try {
-    state = restoreDrawerState(win.localStorage.getItem(storageKey));
+    saved = win.localStorage.getItem(storageKey);
   } catch {
-    state = CLOSED;
+    /* storage blocked: start closed */
   }
+  let state = restoreDrawerState(saved, width());
+  // Pinned on a wider screen: stays closed here but is remembered (and reopens if the window
+  // grows to pinning width) until the user opens a drawer at this size.
+  let waiting = state.open ? null : restoreDrawerState(saved);
+  if (!waiting?.open) waiting = null;
 
   const render = () => {
     for (const id of DRAWERS) {
@@ -75,6 +81,8 @@ export function mountDrawers({ doc = document, win = window, storageKey = 'haris
     doc.body.classList.toggle('drawer-pinned', pinned);
     doc.body.classList.toggle('can-pin', canPin(width()));
     for (const b of doc.querySelectorAll('[data-pin]')) b.setAttribute('aria-pressed', String(pinned));
+    if (state.open) waiting = null;
+    if (waiting) return;
     try {
       win.localStorage.setItem(storageKey, serializeDrawerState(state));
     } catch {
@@ -83,8 +91,12 @@ export function mountDrawers({ doc = document, win = window, storageKey = 'haris
   };
 
   const dispatch = (action) => {
+    const was = state.open;
+    const focusInside = Boolean(was) && doc.getElementById(`drawer-${was}`).contains(doc.activeElement);
     state = drawerReducer(state, action, { width: width() });
     render();
+    // Closed from inside (its close button or Esc): keyboard focus goes back to its rail button.
+    if (action.type === 'escape' && focusInside && state.open !== was) doc.querySelector(`[data-drawer="${was}"]`).focus();
   };
 
   for (const b of doc.querySelectorAll('[data-drawer]')) {
@@ -101,7 +113,10 @@ export function mountDrawers({ doc = document, win = window, storageKey = 'haris
   doc.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && escapeClosesDrawer(doc)) dispatch({ type: 'escape' });
   });
-  win.addEventListener('resize', render);
+  win.addEventListener('resize', () => {
+    if (waiting && !state.open && canPin(width())) state = waiting;
+    render();
+  });
   render();
 
   return {

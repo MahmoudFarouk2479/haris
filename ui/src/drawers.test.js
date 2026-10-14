@@ -65,6 +65,12 @@ test('only a pinned drawer is remembered, and restored', () => {
   assert.deepEqual(restoreDrawerState(saved), { open: 'voice', pinned: true });
 });
 
+test('a drawer pinned on a wide screen starts closed in a narrow window', () => {
+  const saved = serializeDrawerState({ open: 'voice', pinned: true });
+  assert.deepEqual(restoreDrawerState(saved, PIN_MIN_WIDTH - 1), CLOSED);
+  assert.deepEqual(restoreDrawerState(saved, PIN_MIN_WIDTH), { open: 'voice', pinned: true });
+});
+
 test('a broken stored value falls back to closed', () => {
   for (const raw of [null, '', 'not json', '{"pinned":"nope"}', '42', '{"pinned":null}']) {
     assert.deepEqual(restoreDrawerState(raw), CLOSED, String(raw));
