@@ -270,7 +270,7 @@ html[lang='ar'] .rows dt { letter-spacing: 0; text-transform: none; font-size: 0
 
 /* ── Stage: emblem + conversation ───────────────────────────────────────── */
 .stage { grid-area: stage; min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 0.8rem clamp(0.8rem, 2vw, 2rem) 1rem; }
-.emblem-wrap { flex: 1 1 auto; min-height: 0; display: grid; place-items: center; }
+.emblem-wrap { flex: 1 1 auto; min-height: 0; display: grid; place-items: center; overflow: hidden; }
 #emblem { width: clamp(9rem, 38vmin, 34rem); aspect-ratio: 1; }
 .emblem { width: 100%; height: 100%; overflow: visible; }
 .emblem .glow-in { stop-color: var(--line); stop-opacity: 0.3; }
@@ -295,9 +295,10 @@ html[lang='ar'] .rows dt { letter-spacing: 0; text-transform: none; font-size: 0
 [data-emblem='thinking'] .outer .star rect { stroke: var(--gold); opacity: 0.75; }
 [data-emblem='speaking'] .core { fill: var(--line); transform: scale(calc(1.3 + var(--level, 0) * 1.2)); }
 [data-emblem='waiting'] .layer, [data-emblem='error'] .layer { animation-play-state: paused; }
-[data-emblem='waiting'] .star rect, [data-emblem='waiting'] .ring { stroke: var(--gold); opacity: 1; }
+[data-emblem='waiting'] .emblem .star rect, [data-emblem='waiting'] .emblem .ring { stroke: var(--gold); opacity: 1; }
+[data-emblem='waiting'] .core { animation: none; }
 [data-emblem='waiting'] .glow-in, [data-emblem='waiting'] .glow-out { stop-color: var(--gold); }
-[data-emblem='error'] .star rect, [data-emblem='error'] .ring { stroke: var(--danger); opacity: 0.7; }
+[data-emblem='error'] .emblem .star rect, [data-emblem='error'] .emblem .ring { stroke: var(--danger); opacity: 0.7; }
 [data-emblem='error'] .glow-in, [data-emblem='error'] .glow-out { stop-color: var(--danger); }
 [data-emblem='error'] .core { fill: var(--danger); animation: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -522,4 +523,5 @@ html[lang='ar'] .confirm h2 { letter-spacing: 0; font-size: 1.05rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
+  .emblem .core { transform: none !important; }
 }
