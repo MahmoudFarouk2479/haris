@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { STRINGS, setLanguage, t } from './i18n.js';
-import { WEATHER_GROUPS, composeStatusReport, firstNameOf, weatherKey } from './statusReport.js';
+import { WEATHER_GROUPS, composeStatusReport, firstNameOf, waitForEngines, weatherKey } from './statusReport.js';
 
 const system = { cpu: 12.4, memUsedGb: 9.1, memTotalGb: 15.8, battery: 80, charging: true };
 const voiceUp = { stt: true, tts: true, sttRoute: 'local', ttsRoute: 'local' };
@@ -115,4 +115,28 @@ test('every weather group reads naturally in English and has no English in Arabi
   for (const g of WEATHER_GROUPS) {
     assert.doesNotMatch(STRINGS.ar[`wx.${g}`], /[A-Za-z]/, g);
   }
+});
+
+test('waitForEngines: at once when up, retries while starting, gives up with the last answer', async () => {
+  const noSleep = async () => {};
+  let calls = 0;
+  assert.deepEqual(await waitForEngines(async () => { calls++; return voiceUp; }, { tries: 5, sleep: noSleep }), voiceUp);
+  assert.equal(calls, 1);
+
+  const answers = [{ stt: false, tts: true }, null, { stt: false, tts: true }, voiceUp];
+  calls = 0;
+  assert.deepEqual(await waitForEngines(async () => answers[calls++], { tries: 6, sleep: noSleep }), voiceUp);
+  assert.equal(calls, 4);
+
+  calls = 0;
+  const down = { stt: false, tts: false };
+  assert.deepEqual(await waitForEngines(async () => { calls++; return down; }, { tries: 3, sleep: noSleep }), down);
+  assert.equal(calls, 3);
+
+  const colab = { stt: false, tts: true, sttRoute: 'colab' };
+  calls = 0;
+  assert.deepEqual(await waitForEngines(async () => { calls++; return colab; }, { tries: 3, sleep: noSleep }), colab);
+  assert.equal(calls, 1);
+
+  assert.equal(await waitForEngines(async () => null, { tries: 2, sleep: noSleep }), null);
 });

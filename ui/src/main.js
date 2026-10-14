@@ -11,7 +11,7 @@ import { createEmblem } from './emblem.js';
 import { mountDrawers } from './drawers.js';
 import { mountChatPanel } from './chatPanel.js';
 import { applyLanguage, brandFor, getLanguage, locale, speakerFor, t } from './i18n.js';
-import { composeStatusReport, firstNameOf } from './statusReport.js';
+import { composeStatusReport, firstNameOf, waitForEngines } from './statusReport.js';
 import { sameRules } from './settingsDiff.js';
 import { SentenceSplitter, Voice } from './voice.js';
 import { takePhoto } from './camera.js';
@@ -869,13 +869,16 @@ async function spoken() {
   for (let i = 0; i < 600 && voice.speaking; i++) await sleep(200);
 }
 
-/** Reads system, voice engines and weather in parallel; weather gets ~4 s, then is left out. */
+/**
+ * Reads voice engines (given ~12 s to finish starting) and weather (~4 s, then left out) in
+ * parallel, then the system, so the CPU figure is a recent one rather than the launch spike.
+ */
 async function statusReport(firstName) {
-  const [system, voiceStatus, weather] = await Promise.all([
-    api('/api/system').catch(() => null),
-    api('/api/voice/status').catch(() => null),
+  const [voiceStatus, weather] = await Promise.all([
+    waitForEngines(() => api('/api/voice/status'), { tries: 6, delayMs: 2500, sleep }),
     Promise.race([api(`/api/weather/now?lang=${getLanguage()}`).catch(() => null), sleep(4000).then(() => null)]),
   ]);
+  const system = await api('/api/system').catch(() => null);
   return composeStatusReport({ partOfDay: partOfDay(), firstName, system, voice: voiceStatus, weather }, t);
 }
 

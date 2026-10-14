@@ -51,6 +51,23 @@ function engines(voice) {
   };
 }
 
+/**
+ * Haris starts its voice engines at launch and the speech model takes a few seconds to load, so a
+ * report composed at once would call it offline. Asks again (up to `tries` times) until both are up;
+ * returns the last answer either way (null if the core never answered).
+ */
+export async function waitForEngines(fetchStatus, { tries = 6, delayMs = 2000, sleep } = {}) {
+  let last = null;
+  for (let i = 0; i < tries; i++) {
+    const status = await fetchStatus().catch(() => null);
+    if (status) last = status;
+    const up = engines(status);
+    if (up?.stt && up?.tts) return status;
+    if (i < tries - 1) await sleep(delayMs);
+  }
+  return last;
+}
+
 function engineSentence(up, t) {
   if (up.stt && up.tts) return t('report.voiceReady');
   if (!up.stt && !up.tts) return t('report.voiceDown');
