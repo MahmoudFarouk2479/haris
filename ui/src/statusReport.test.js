@@ -27,6 +27,37 @@ test('first name: first word, extra spaces, Arabic names, empty', () => {
   assert.equal(firstNameOf(undefined), '');
 });
 
+test('first name: compound Arabic names stay whole', () => {
+  assert.equal(firstNameOf('عبد الرحمن'), 'عبد الرحمن');
+  assert.equal(firstNameOf('عبد الله محمد'), 'عبد الله');
+  assert.equal(firstNameOf('  عبد   الرحمن   فاروق '), 'عبد الرحمن');
+  assert.equal(firstNameOf('عبد ال رحمن علي'), 'عبد ال رحمن');   // «ال» written apart
+  assert.equal(firstNameOf('أبو بكر الصديق'), 'أبو بكر');
+  assert.equal(firstNameOf('ابو بكر'), 'ابو بكر');
+  assert.equal(firstNameOf('عبدالرحمن فاروق'), 'عبدالرحمن');     // already one word
+  assert.equal(firstNameOf('عبد'), 'عبد');                          // nothing to join
+});
+
+test('first name: compound Latin names stay whole', () => {
+  assert.equal(firstNameOf('Abdel Rahman Ali'), 'Abdel Rahman');
+  assert.equal(firstNameOf('Abd El Rahman Ali'), 'Abd El Rahman');
+  assert.equal(firstNameOf('Abd Allah Ali'), 'Abd Allah');
+  assert.equal(firstNameOf('abdul karim'), 'abdul karim');
+  assert.equal(firstNameOf('Abu Bakr'), 'Abu Bakr');
+  assert.equal(firstNameOf('El Sayed Mostafa'), 'El Sayed');
+  assert.equal(firstNameOf('Abdelrahman Ali'), 'Abdelrahman');
+  assert.equal(firstNameOf('Elizabeth Taylor'), 'Elizabeth');
+  assert.equal(firstNameOf('Abdel'), 'Abdel');
+});
+
+test('first name: a leading title is skipped', () => {
+  assert.equal(firstNameOf('Dr. Mahmoud Farouk'), 'Mahmoud');
+  assert.equal(firstNameOf('Eng. Abdel Rahman Ali'), 'Abdel Rahman');
+  assert.equal(firstNameOf('د. محمود فاروق'), 'محمود');
+  assert.equal(firstNameOf('م. عبد الله'), 'عبد الله');
+  assert.equal(firstNameOf('Dr.'), 'Dr.');                          // a title alone is still a name
+});
+
 test('weather codes map to the nine condition groups', () => {
   const cases = {
     0: 'clear', 1: 'partly', 2: 'partly', 3: 'overcast', 45: 'fog', 48: 'fog',
@@ -46,14 +77,14 @@ test('English, everything up', () => {
   const text = composeStatusReport({ partOfDay: 'evening', firstName: 'Mahmoud', system, voice: voiceUp, weather }, t);
   assert.equal(text,
     'Good evening, Mahmoud. All systems are online. CPU at 12%, memory 9.1 of 16 GB, battery 80% and charging. '
-    + "Voice engines are ready. In Cairo it's 24°C with clear skies, high of 29.");
+    + "Voice engines are ready. In Cairo it's 24°C with clear skies, high of 29°C.");
 });
 
 test('Arabic, everything up', () => {
   const text = inLanguage('ar', () =>
     composeStatusReport({ partOfDay: 'morning', firstName: 'محمود', system, voice: voiceUp, weather: { ...weather, city: 'القاهرة' } }, t));
   assert.equal(text,
-    'صباح الخير يا محمود. كل الأنظمة تعمل. المعالج عند 12%، والذاكرة 9.1 من 16 جيجابايت، والبطارية 80% وتُشحن. '
+    'صباح الخير يا محمود. كل الأنظمة تعمل. استهلاك المعالج 12%، والذاكرة 9.1 من 16 جيجابايت، والبطارية 80% وتُشحن. '
     + 'محركات الصوت جاهزة. في القاهرة الآن 24°C، سماء صافية، والعظمى اليوم 29°C.');
   assert.doesNotMatch(text, /clear|skies|Good/);
 });
@@ -71,7 +102,7 @@ test('something down: attention first, then what is offline (en + ar)', () => {
   const ar = inLanguage('ar', () =>
     composeStatusReport({ partOfDay: 'evening', firstName: '', system, voice: sttDown, weather: null }, t));
   assert.equal(ar,
-    'مساء الخير يا فندم. بعض الأنظمة تحتاج إلى انتباه. المعالج عند 12%، والذاكرة 9.1 من 16 جيجابايت، والبطارية 80% وتُشحن. '
+    'مساء الخير يا فندم. بعض الأنظمة تحتاج إلى انتباه. استهلاك المعالج 12%، والذاكرة 9.1 من 16 جيجابايت، والبطارية 80% وتُشحن. '
     + 'التعرّف على الكلام متوقف — هل Docker Desktop يعمل؟');
 });
 
@@ -99,7 +130,7 @@ test('no weather, no system, unknown condition: those sentences are skipped', ()
   const bare = composeStatusReport({ partOfDay: 'morning', firstName: 'Mahmoud', system: null, voice: voiceUp, weather: undefined }, t);
   assert.equal(bare, 'Good morning, Mahmoud. All systems are online. Voice engines are ready.');
   const oddCode = composeStatusReport({ partOfDay: 'morning', firstName: 'Mahmoud', system: null, voice: voiceUp, weather: { ...weather, code: 42 } }, t);
-  assert.match(oddCode, /In Cairo it's 24°C, high of 29\.$/);
+  assert.match(oddCode, /In Cairo it's 24°C, high of 29°C\.$/);
   const arOdd = inLanguage('ar', () =>
     composeStatusReport({ partOfDay: 'morning', firstName: 'محمود', system: null, voice: voiceUp, weather: { ...weather, city: 'القاهرة', code: 42 } }, t));
   assert.match(arOdd, /في القاهرة الآن 24°C، والعظمى اليوم 29°C\.$/);
@@ -108,7 +139,7 @@ test('no weather, no system, unknown condition: those sentences are skipped', ()
 test('unknown engine state: no claim either way, no engine sentence', () => {
   const text = composeStatusReport({ partOfDay: 'morning', firstName: 'Mahmoud', system, voice: null, weather }, t);
   assert.equal(text,
-    "Good morning, Mahmoud. CPU at 12%, memory 9.1 of 16 GB, battery 80% and charging. In Cairo it's 24°C with clear skies, high of 29.");
+    "Good morning, Mahmoud. CPU at 12%, memory 9.1 of 16 GB, battery 80% and charging. In Cairo it's 24°C with clear skies, high of 29°C.");
 });
 
 test('every weather group reads naturally in English and has no English in Arabic', () => {

@@ -19,9 +19,21 @@ export function weatherKey(code) {
   return group ? `wx.${group}` : null;
 }
 
-/** The first whitespace-separated word of the user's name ('' when there is none). */
+// Names that are two words, written apart: «عبد الرحمن», «أبو بكر», "Abdel Rahman", "El Sayed".
+// Calling someone «يا عبد» or "Abdel" alone is wrong (and in Egyptian Arabic, rude).
+const COMPOUND_FIRST = new Set(['عبد', 'أبو', 'ابو', 'abd', 'abdel', 'abdal', 'abdul', 'abdol', 'abu', 'abou', 'el', 'al']);
+// The article written as a word of its own: «عبد ال رحمن», "Abd El Rahman".
+const ARTICLE = new Set(['ال', 'el', 'al']);
+// Titles some people put before their name; the greeting uses the name itself.
+const TITLES = new Set(['dr.', 'dr', 'eng.', 'eng', 'prof.', 'mr.', 'mrs.', 'ms.', 'د.', 'م.', 'أ.', 'أ.د.']);
+
+/** The name to address the user by: the first name, kept whole when it is a compound one ('' when there is none). */
 export function firstNameOf(userName) {
-  return String(userName ?? '').trim().split(/\s+/u)[0] ?? '';
+  let words = String(userName ?? '').trim().split(/\s+/u).filter(Boolean);
+  if (words.length > 1 && TITLES.has(words[0].toLowerCase())) words = words.slice(1);
+  if (words.length < 2 || !COMPOUND_FIRST.has(words[0].toLowerCase())) return words[0] ?? '';
+  const take = ARTICLE.has(words[1].toLowerCase()) && words.length > 2 ? 3 : 2;
+  return words.slice(0, take).join(' ');
 }
 
 const isNumber = (v) => typeof v === 'number' && Number.isFinite(v);
