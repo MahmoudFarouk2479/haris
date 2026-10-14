@@ -80,6 +80,7 @@ body::before {
   letter-spacing: 0.32em;
   color: var(--line);
   white-space: nowrap;
+  unicode-bidi: plaintext;   /* a Latin brand keeps its dots in place inside the RTL UI */
 }
 html[lang='ar'] #assistant-name { letter-spacing: 0; font-size: 1.3rem; }
 .tagline {
@@ -324,7 +325,7 @@ html[lang='ar'] .rows dt { letter-spacing: 0; text-transform: none; font-size: 0
   scrollbar-color: var(--line-dim) transparent;
 }
 .msg { max-width: 82%; padding: 0.6rem 0.85rem; border: 1px solid var(--line-dim); border-radius: 0.7rem; background: rgba(11, 31, 30, 0.85); animation: msg-in 0.3s both; }
-.msg header { font-family: var(--font-display); font-size: 0.6rem; letter-spacing: 0.3em; color: var(--line); margin-bottom: 0.2rem; }
+.msg header { font-family: var(--font-display); font-size: 0.6rem; letter-spacing: 0.3em; color: var(--line); margin-bottom: 0.2rem; unicode-bidi: plaintext; }
 html[lang='ar'] .msg header { letter-spacing: 0; font-size: 0.75rem; }
 .msg .body { white-space: pre-wrap; line-height: 1.45; font-size: 1.02rem; font-weight: 500; unicode-bidi: plaintext; }
 .msg.user { align-self: flex-end; border-color: rgba(var(--gold-rgb), 0.45); }
