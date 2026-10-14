@@ -19,6 +19,8 @@
 
 <p align="center"><img src="docs/media/approval.gif" width="720" alt="حارس بيستأذن قبل أي فعل" /></p>
 
+<p align="center"><img src="docs/media/06-voice-mode.png" width="720" alt="وضع الصوت: أخفِ المحادثة واترك خانة الكتابة" /><br/><em>وضع الصوت: أخفِ المحادثة واترك خانة الكتابة</em></p>
+
 ## المميزات
 
 - 🧠 **أي موديل:** Claude، أو موديل محلي، أو سحابة متوافقة مع OpenAI، أو Colab ورا proxy بيتأكد من التوكن.

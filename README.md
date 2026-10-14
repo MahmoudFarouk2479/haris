@@ -24,6 +24,8 @@ Java 21 + Spring Boot core · SVG HUD (English or Arabic) · your choice of brai
 |---|---|---|
 | ![English answer](docs/media/02-english-answer.png) | ![Approval card](docs/media/03-approval.png) | ![Arabic answer](docs/media/05-arabic.png) |
 
+<p align="center"><img src="docs/media/06-voice-mode.png" width="720" alt="Voice mode: hide the conversation, keep the input" /><br/><em>Voice mode: hide the conversation, keep the input</em></p>
+
 ## Features
 
 | | |
