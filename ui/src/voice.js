@@ -16,6 +16,12 @@ const END_SILENCE_MS = 600;      // this much quiet after speech ends a recordin
 const NO_SPEECH_MS = 5000;       // give up if nobody speaks
 const MAX_RECORD_MS = 15000;
 const FRAME_MS = 80;
+/**
+ * Speech is played a little below full scale (0.8 = about -2 dB). The synthesised voice peaks at
+ * 0 dBFS, and the browser's resampling to the output rate then clips some peaks. Volume only:
+ * the audio is not resampled or stretched, so the speed of speech does not change.
+ */
+export const SPEECH_GAIN = 0.8;
 
 export class Voice {
   constructor({ onLevel, onWake, onMicState, onSpeaking, onNeedsGesture, onSpeechError }) {
@@ -33,6 +39,7 @@ export class Voice {
     this.speaking = false;
     this.queue = [];
     this.out = null;
+    this.gain = null;
     this.current = null;
     // One speech request at a time; sentences that arrive meanwhile are sent together.
     this.speech = new SpeechQueue(
@@ -230,8 +237,13 @@ export class Voice {
     const analyser = this.out.createAnalyser();
     analyser.fftSize = 512;
     src.buffer = buffer;
+    // The meter reads the voice before the gain, so the emblem reacts exactly as before.
+    if (!this.gain) {
+      this.gain = new GainNode(this.out, { gain: SPEECH_GAIN });
+      this.gain.connect(this.out.destination);
+    }
     src.connect(analyser);
-    analyser.connect(this.out.destination);
+    analyser.connect(this.gain);
     const data = new Uint8Array(analyser.fftSize);
     const meter = () => {
       if (this.current !== src) return;

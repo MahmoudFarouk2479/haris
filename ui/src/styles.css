@@ -635,7 +635,20 @@ html[lang='ar'] .confirm h2 { letter-spacing: 0; font-size: 1.05rem; }
   body.chat-side:not(.chat-hidden) .transcript { flex: 1 1 auto; min-height: 0; max-height: none; }
 
   /* Hidden ("voice mode"): the emblem takes the stage; the composer stays as a floating bar. */
-  body.chat-hidden .transcript, body.chat-hidden .chat-head { display: none; }
+  body.chat-hidden .chat-head { display: none; }
+  /* The transcript is the aria-live region: hidden from sight only, so screen readers still hear
+     new replies in voice mode (display: none would take it out of the accessibility tree). */
+  body.chat-hidden .transcript {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
   body.chat-hidden .console { width: min(44rem, 90%); }
   body.chat-hidden #emblem { width: clamp(9rem, 66vmin, 48rem); }
   body.chat-hidden .chat-tab:not([hidden]) { display: flex; }

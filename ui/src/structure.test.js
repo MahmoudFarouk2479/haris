@@ -44,3 +44,19 @@ test('Three.js and the reactor are gone', () => {
 test('messages keep their own direction', () => {
   assert.match(main, /body\.dir = 'auto'/);
 });
+
+test('voice mode hides the transcript from sight only, so its aria-live replies are still announced', () => {
+  const css = readFileSync(new URL('./styles.css', import.meta.url), 'utf8');
+  assert.match(html, /id="transcript"[^>]*aria-live="polite"/);
+  assert.doesNotMatch(css, /body\.chat-hidden \.transcript[^{]*\{[^}]*display:\s*none/);
+  assert.match(css, /body\.chat-hidden \.transcript \{[^}]*clip-path: inset\(50%\)/);
+});
+
+test('speech plays with a little headroom (volume only, never faster or slower)', () => {
+  const voiceJs = readFileSync(new URL('./voice.js', import.meta.url), 'utf8');
+  const gain = Number(voiceJs.match(/export const SPEECH_GAIN = ([\d.]+);/)?.[1]);
+  assert.ok(gain >= 0.7 && gain <= 0.9, `SPEECH_GAIN ${gain}`);
+  assert.match(voiceJs, /analyser\.connect\(this\.gain\)/);
+  assert.doesNotMatch(voiceJs, /analyser\.connect\(this\.out\.destination\)/);
+  assert.doesNotMatch(voiceJs, /playbackRate|detune/);
+});
