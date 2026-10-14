@@ -131,6 +131,11 @@ async function refreshVoiceStatus() {
     if (s.ttsRoute === 'gemini') {
       $('voice-tts').textContent = s.tts ? '● Gemini (Piper backup)' : '● Gemini';
       $('voice-tts').classList.remove('off');
+    } else if (s.ttsRoute === 'gemini-paused') {
+      // Google's limit was reached (often the free daily quota): Piper speaks until it resets.
+      const at = new Date(s.ttsResumeAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      $('voice-tts').textContent = `● Piper (Gemini limit, back ${at})`;
+      $('voice-tts').classList.toggle('off', !s.tts);
     } else {
       mark('voice-tts', s.tts);
     }

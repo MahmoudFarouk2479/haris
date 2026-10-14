@@ -77,7 +77,12 @@ public class VoiceController {
             status.put("wake", wake);
             status.put("wakeWords", wake ? List.of(WakeWordSocket.WAKE_WORD) : List.of());
             status.put("sttRoute", colab.target().isPresent() ? "colab" : "local");
-            status.put("ttsRoute", gemini.selected() ? "gemini" : "local");
+            long resumeAt = gemini.pausedUntil();
+            boolean paused = resumeAt > System.currentTimeMillis();
+            status.put("ttsRoute", !gemini.selected() ? "local" : paused ? "gemini-paused" : "gemini");
+            if (paused) {
+                status.put("ttsResumeAt", resumeAt);   // e.g. a daily quota: Piper speaks until then
+            }
             cachedStatus = status;
             statusAt = System.currentTimeMillis();
         }

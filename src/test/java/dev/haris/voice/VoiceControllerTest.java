@@ -114,6 +114,24 @@ class VoiceControllerTest {
     }
 
     @Test
+    void theStatusSaysWhenGeminiIsPausedByItsLimit() {
+        VoiceEngines engines = mock(VoiceEngines.class);
+        when(engines.status()).thenReturn(java.util.Map.of("stt", true, "tts", true));
+        GeminiSpeech gemini = mock(GeminiSpeech.class);
+        when(gemini.selected()).thenReturn(true);
+        when(gemini.pausedUntil()).thenReturn(System.currentTimeMillis() + 3_600_000);
+        ColabSpeech colab = mock(ColabSpeech.class);
+        when(colab.target()).thenReturn(java.util.Optional.empty());
+        VoiceController controller = new VoiceController(engines, colab, mock(WakeWordDetector.class), gemini,
+                mock(SettingsService.class), mock(EnginesService.class));
+
+        var status = controller.status();
+
+        assertThat(status.get("ttsRoute")).isEqualTo("gemini-paused");
+        assertThat((Long) status.get("ttsResumeAt")).isGreaterThan(System.currentTimeMillis());
+    }
+
+    @Test
     void geminiSpeaksWhenChosenAndPiperIsNotUsed() throws Exception {
         VoiceEngines engines = mock(VoiceEngines.class);
         GeminiSpeech gemini = mock(GeminiSpeech.class);

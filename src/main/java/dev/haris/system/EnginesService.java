@@ -52,7 +52,9 @@ public class EnginesService {
         }
         Thread.ofVirtual().name("engines").start(() -> {
             try {
-                if (!dockerRunning()) {
+                // Docker Desktop can take a minute to answer after it (or Windows) starts: keep asking
+                // for about three minutes before giving up, instead of once.
+                if (!waitFor(EnginesService::dockerRunning, DOCKER_ATTEMPTS, DOCKER_RETRY_MS)) {
                     log.info("Docker is not running: voice and web search are off until it is started.");
                     return;
                 }
@@ -193,6 +195,30 @@ public class EnginesService {
             Thread.currentThread().interrupt();
             return "";
         }
+    }
+
+    private static final int DOCKER_ATTEMPTS = 12;
+    private static final long DOCKER_RETRY_MS = 10_000;
+
+    /** Asks {@code ready} up to {@code attempts} times, pausing between tries; true once it answers yes. */
+    static boolean waitFor(java.util.function.BooleanSupplier ready, int attempts, long pauseMs) {
+        for (int i = 1; i <= attempts; i++) {
+            if (ready.getAsBoolean()) {
+                return true;
+            }
+            if (i == 1) {
+                log.info("Waiting for Docker to answer...");
+            }
+            if (i < attempts) {
+                try {
+                    Thread.sleep(pauseMs);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return false;
+                }
+            }
+        }
+        return false;
     }
 
     private static boolean dockerRunning() {
