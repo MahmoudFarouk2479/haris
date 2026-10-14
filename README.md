@@ -196,6 +196,17 @@ The project started as "JARVIS" and was renamed to Haris before its first public
 the first start, Haris moves data from an earlier JARVIS install (`~/.jarvis`, stored keys, the
 Start-with-Windows entry) to its new name; the installer removes the old program files.
 
+## Connect
+
+Built by **Mahmoud Farouk**. ⭐ Star the repo if Haris is useful to you, and say hi:
+
+| Platform | Link |
+|---|---|
+| GitHub | [@MahmoudFarouk2479](https://github.com/MahmoudFarouk2479) |
+| YouTube | [@mahmoudfaroukabdelhamid](https://www.youtube.com/@mahmoudfaroukabdelhamid) |
+| LinkedIn | [mahmoud-farouk-abdelhamid](https://www.linkedin.com/in/mahmoud-farouk-abdelhamid) |
+| X | [@Mahmoud44145036](https://x.com/Mahmoud44145036) |
+
 ## License
 
 [MIT](LICENSE). Third-party components and their licenses: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

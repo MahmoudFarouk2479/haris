@@ -64,6 +64,17 @@
 
 لو لقيت ثغرة، شوف [SECURITY.md](SECURITY.md).
 
+## تواصل معايا
+
+اتعمل بواسطة **محمود فاروق**. لو حارس فادك، اعمل ⭐ للريبو، وتابعني:
+
+| المنصة | اللينك |
+|---|---|
+| GitHub | [@MahmoudFarouk2479](https://github.com/MahmoudFarouk2479) |
+| YouTube | [@mahmoudfaroukabdelhamid](https://www.youtube.com/@mahmoudfaroukabdelhamid) |
+| LinkedIn | [mahmoud-farouk-abdelhamid](https://www.linkedin.com/in/mahmoud-farouk-abdelhamid) |
+| X | [@Mahmoud44145036](https://x.com/Mahmoud44145036) |
+
 ## الرخصة
 
 [MIT](LICENSE). رخص المكوّنات الخارجية في [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
