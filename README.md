@@ -7,7 +7,7 @@ apps, manage files, search the web, see your screen, talk and listen — **witho
 Every action goes through a permission gate you control, keys live in the OS vault, and the server
 is unreachable from anything but its own window.
 
-Java 21 + Spring Boot core · Three.js HUD · your choice of brain:
+Java 21 + Spring Boot core · SVG HUD (English or Arabic) · your choice of brain:
 **Claude**, **Ollama**, **LM Studio**, **any OpenAI-compatible API**, or **Ollama on a free Google Colab GPU**.
 
 > *Haris* (حارس) means *guardian* in Arabic. Built after auditing a popular open-source assistant that opened firewall ports, switched the
@@ -168,7 +168,7 @@ src/main/java/dev/haris/
   web/        WebSearchTool, FetchPageTool, PageFetcher (pinned DNS), NetGuard (SSRF rules)
   memory/     MemoryStore (AES-256-GCM), remember / recall / forget
   settings/   Settings, validation; system/ briefing, autostart, engines; launcher/ app window
-ui/           Vite + Three.js HUD
+ui/           Vite HUD: SVG emblem, drawers, English/Arabic strings
 voice/ search/  Docker Compose files for the local engines
 colab/        notebook, its generator, and the token proxy
 models/       fetch-models.ps1 (the model itself is downloaded, not committed)

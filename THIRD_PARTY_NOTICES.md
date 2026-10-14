@@ -18,7 +18,7 @@ license. Check this list again before using Haris in a commercial product.
 | java-keyring | Windows Credential Manager | BSD-3-Clause |
 | Vosk (`com.alphacephei:vosk`) | wake word | Apache-2.0 |
 | `vosk-model-small-en-us-0.15` | wake-word model | Apache-2.0 ([source](https://alphacephei.com/vosk/models)) |
-| three.js | HUD graphics | MIT |
+| IBM Plex Sans Arabic (via @fontsource) | Arabic interface font | SIL Open Font License 1.1 |
 | Orbitron, Rajdhani (via @fontsource) | HUD fonts | SIL Open Font License 1.1 |
 
 ## Downloaded and run separately, on your machine or your Colab session

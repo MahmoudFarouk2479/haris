@@ -25,3 +25,22 @@ test('ids are unique', () => {
   const all = [...html.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]);
   assert.equal(all.length, new Set(all).size);
 });
+
+const main = readFileSync(new URL('./main.js', import.meta.url), 'utf8');
+
+test("every id main.js reads with $('…') exists in index.html", () => {
+  for (const [, id] of main.matchAll(/\$\('([A-Za-z0-9-]+)'\)/g)) {
+    assert.ok(ids.has(id), `main.js reads #${id}, which index.html does not have`);
+  }
+});
+
+test('Three.js and the reactor are gone', () => {
+  assert.doesNotMatch(main, /reactor/);
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.equal(pkg.dependencies.three, undefined);
+  assert.equal(pkg.dependencies['@fontsource/ibm-plex-sans-arabic'], '5.3.0');
+});
+
+test('messages keep their own direction', () => {
+  assert.match(main, /body\.dir = 'auto'/);
+});

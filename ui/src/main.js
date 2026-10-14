@@ -2,31 +2,39 @@ import '@fontsource/orbitron/500.css';
 import '@fontsource/orbitron/700.css';
 import '@fontsource/rajdhani/500.css';
 import '@fontsource/rajdhani/600.css';
+import '@fontsource/ibm-plex-sans-arabic/400.css';
+import '@fontsource/ibm-plex-sans-arabic/600.css';
 import './styles.css';
 
 import { api, hasToken, streamChat, subscribeEvents } from './api.js';
-import { createReactor } from './reactor.js';
+import { createEmblem } from './emblem.js';
+import { mountDrawers } from './drawers.js';
+import { applyLanguage, brandFor, locale, speakerFor, t } from './i18n.js';
 import { SentenceSplitter, Voice } from './voice.js';
 import { takePhoto } from './camera.js';
 
 const $ = (id) => document.getElementById(id);
-const reactor = createReactor($('reactor'));
+const emblem = createEmblem($('emblem'));
+const drawers = mountDrawers();
 
-const STATE_LABELS = {
-  idle: 'STANDBY', thinking: 'PROCESSING', speaking: 'RESPONDING', acting: 'EXECUTING',
-  waiting: 'AWAITING AUTHORISATION', error: 'FAULT', listening: 'LISTENING', transcribing: 'TRANSCRIBING',
-};
-const REACTOR_STATE = { acting: 'thinking', waiting: 'thinking', transcribing: 'thinking' };
 function setState(state) {
   document.body.dataset.state = state;
-  $('state-label').textContent = STATE_LABELS[state];
-  reactor.setState(REACTOR_STATE[state] ?? state);
+  $('state-label').textContent = t(`state.${state}`);
+  emblem.setState(state);
+}
+
+/** A short burst of emblem activity (voice level, streamed text) that settles back to rest. */
+let pulseTimer = null;
+function pulse(level) {
+  emblem.setLevel(level);
+  clearTimeout(pulseTimer);
+  pulseTimer = setTimeout(() => emblem.setLevel(0), 180);
 }
 
 // ── Voice ──────────────────────────────────────────────────────────────────
 let settingsCache = null;
 const voice = new Voice({
-  onLevel: (rms) => reactor.pulse(Math.min(0.35, rms * 2.5)),
+  onLevel: (rms) => pulse(Math.min(1, rms * 6)),
   onWake: () => {
     if (busy) return;
     voice.chime();
@@ -35,7 +43,7 @@ const voice = new Voice({
   onMicState: ({ open, recording, wake }) => {
     $('mic-badge').hidden = !open;
     $('mic-badge').classList.toggle('rec', recording);
-    $('mic-label').textContent = recording ? 'RECORDING' : wake ? 'MIC · WAKE WORD ONLY' : 'MIC';
+    $('mic-label').textContent = recording ? t('mic.recording') : wake ? t('mic.wake') : t('mic.on');
     $('mic').classList.toggle('active', recording);
     if (!recording && document.body.dataset.state === 'listening') setState('transcribing');
   },
@@ -53,8 +61,8 @@ const voice = new Voice({
       }, 250);
     }
   },
-  onNeedsGesture: once(() => addMessage('notice', 'The browser is holding my voice back: click anywhere in this window once to enable it.')),
-  onSpeechError: once(() => addMessage('error', 'I could not speak: the speech engine did not answer. Check that Docker Desktop is running — the Voice panel shows each engine status.')),
+  onNeedsGesture: once(() => addMessage('notice', t('msg.needsGesture'))),
+  onSpeechError: once(() => addMessage('error', t('msg.speechError'))),
 });
 
 function once(fn) {
@@ -85,7 +93,7 @@ async function talk({ auto, followUp = false }) {
     lastInputWasVoice = true;
     send(text);
   } catch (e) {
-    addMessage('error', e.message || 'Voice input failed.');
+    addMessage('error', e.message || t('msg.voiceFailed'));
     setState('error');
     setTimeout(() => setState('idle'), 2500);
   }
@@ -118,29 +126,29 @@ window.addEventListener('keyup', (e) => {
 async function refreshVoiceStatus() {
   try {
     const s = await api('/api/voice/status');
-    const mark = (id, ok, extra = '') => {
-      $(id).textContent = ok ? `● Online${extra}` : '○ Offline';
+    const mark = (id, ok) => {
+      $(id).textContent = ok ? t('voice.online') : t('voice.offline');
       $(id).classList.toggle('off', !ok);
     };
     if (s.sttRoute === 'colab') {
-      $('voice-stt').textContent = s.stt ? '● Colab GPU (local backup)' : '● Colab GPU';
+      $('voice-stt').textContent = s.stt ? t('voice.colabBackup') : t('voice.colab');
       $('voice-stt').classList.remove('off');
     } else {
       mark('voice-stt', s.stt);
     }
     if (s.ttsRoute === 'gemini') {
-      $('voice-tts').textContent = s.tts ? '● Gemini (Piper backup)' : '● Gemini';
+      $('voice-tts').textContent = s.tts ? t('voice.geminiBackup') : t('voice.gemini');
       $('voice-tts').classList.remove('off');
     } else if (s.ttsRoute === 'gemini-paused') {
       // Google's limit was reached (often the free daily quota): Piper speaks until it resets.
-      const at = new Date(s.ttsResumeAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      $('voice-tts').textContent = `● Piper (Gemini limit, back ${at})`;
+      const time = new Date(s.ttsResumeAt).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
+      $('voice-tts').textContent = t('voice.geminiPaused', { time });
       $('voice-tts').classList.toggle('off', !s.tts);
     } else {
       mark('voice-tts', s.tts);
     }
-    mark('voice-wake', s.wake && s.wakeWords.includes('hey_haris'), '');
-    if (s.wake && !s.wakeWords.includes('hey_haris')) $('voice-wake').textContent = '○ No "hey haris" model';
+    mark('voice-wake', s.wake && s.wakeWords.includes('hey_haris'));
+    if (s.wake && !s.wakeWords.includes('hey_haris')) $('voice-wake').textContent = t('voice.noWakeModel');
   } catch {
     /* ignore */
   }
@@ -151,7 +159,7 @@ async function applyVoiceSettings(s) {
     try {
       await voice.enableWake();
     } catch {
-      addMessage('error', 'Microphone access was refused, so the wake word is off.');
+      addMessage('error', t('msg.micRefused'));
     }
   } else if (!s.voiceWake && voice.wakeEnabled) {
     voice.disableWake();
@@ -167,7 +175,7 @@ async function boot() {
     'Session token ............................ VERIFIED',
     'Credential vault ......................... SEALED',
     'Permission gate .......................... ARMED',
-    'Holographic projector .................... ONLINE',
+    'Guardian emblem .......................... ONLINE',
   ];
   const log = $('boot-log');
   const fast = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -184,9 +192,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // ── Clock ──────────────────────────────────────────────────────────────────
 function tickClock() {
   const now = new Date();
-  $('clock-time').textContent = now.toLocaleTimeString('en-GB', { hour12: false });
+  $('clock-time').textContent = now.toLocaleTimeString(locale(), { hour12: false });
   $('clock-date').textContent = now
-    .toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+    .toLocaleDateString(locale(), { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
     .toUpperCase();
 }
 
@@ -205,7 +213,7 @@ async function refreshSystem() {
     $('cores').textContent = s.cores;
     $('processes').textContent = s.processes;
     $('uptime').textContent = formatUptime(s.uptimeSeconds);
-    $('power').textContent = s.battery < 0 ? 'AC' : `${s.battery}%${s.charging ? ' ⚡' : ''}`;
+    $('power').textContent = s.battery < 0 ? t('sys.ac') : `${s.battery}%${s.charging ? ' ⚡' : ''}`;
     cpuHistory.push(s.cpu);
     if (cpuHistory.length > 60) cpuHistory.shift();
     drawSpark($('cpu-spark'), cpuHistory);
@@ -228,7 +236,7 @@ function formatUptime(sec) {
 function drawSpark(canvas, values) {
   const g = canvas.getContext('2d');
   const { width: w, height: h } = canvas;
-  const accent = getComputedStyle(document.body).getPropertyValue('--accent').trim();
+  const accent = getComputedStyle(document.body).getPropertyValue('--line').trim();
   g.clearRect(0, 0, w, h);
   g.strokeStyle = accent;
   g.globalAlpha = 0.25;
@@ -254,23 +262,22 @@ function drawSpark(canvas, values) {
 }
 
 // ── Activity & security ────────────────────────────────────────────────────
-const TOOL_LABELS = {
-  open_app: 'Open app', open_url: 'Browser', media_control: 'Media', power: 'Power',
-  list_folder: 'List folder', search_files: 'Search files', read_file: 'Read file', write_file: 'Write file',
-  create_folder: 'New folder', move_file: 'Move', delete_file: 'Recycle', clipboard_read: 'Clipboard',
-  clipboard_write: 'Clipboard', reminders: 'Reminders', weather: 'Weather', compose_message: 'Message draft',
-  system_status: 'System', list_apps: 'Apps', undo: 'Undo',
-  look_at_screen: 'Screen', look_through_camera: 'Camera',
-  web_search: 'Web search', fetch_page: 'Read page',
-  remember: 'Remember', recall: 'Recall', forget: 'Forget', memory: 'Memory', autostart: 'Autostart',
-};
+function toolLabel(tool) {
+  const key = `tool.${tool}`;
+  const label = t(key);
+  return label === key ? tool : label;
+}
 const DECISION_ICON = { auto: '◇', session: '◆', approved: '✓', 'approved (session)': '✓', denied: '✕', user: '↶' };
 
+let lastActivity = null;
 async function refreshActivity() {
   try {
     const a = await api('/api/activity');
-    $('tools-count').textContent = `${a.tools} allow-listed`;
+    $('tools-count').textContent = t('sec.toolsCount', { n: a.tools });
     setContext(a.externalContent);
+    const newest = a.entries[0]?.time ?? '';
+    if (lastActivity !== null && newest && newest !== lastActivity) drawers.markNew('activity');
+    lastActivity = newest;
     const list = $('activity');
     list.replaceChildren();
     for (const e of a.entries.slice(0, 6)) {
@@ -280,27 +287,30 @@ async function refreshActivity() {
       icon.textContent = DECISION_ICON[e.decision] ?? '·';
       const text = document.createElement('span');
       text.textContent = e.summary;
-      text.title = `${e.tool} · ${e.risk} · ${e.decision} · ${e.outcome}\n${new Date(e.time).toLocaleString()}`;
+      text.title = `${e.tool} · ${e.risk} · ${e.decision} · ${e.outcome}\n${new Date(e.time).toLocaleString(locale())}`;
       li.append(icon, text);
       list.append(li);
     }
     if (!a.entries.length) {
       const li = document.createElement('li');
       li.className = 'empty';
-      li.textContent = 'No actions yet';
+      li.textContent = t('activity.empty');
       list.append(li);
     }
     $('undo').disabled = !a.undo;
-    $('undo-label').textContent = a.undo ? `Next undo: ${a.undo}` : '';
+    $('undo-label').textContent = a.undo ? t('activity.nextUndo', { what: a.undo }) : '';
   } catch {
     /* ignore */
   }
 }
 
+let externalNow = false;
 function setContext(external) {
   const el = $('context-state');
-  el.textContent = external ? 'External content' : 'Clean';
+  el.textContent = external ? t('sec.external') : t('sec.clean');
   el.classList.toggle('warn', external);
+  if (external && !externalNow) drawers.markNew('security');
+  externalNow = external;
 }
 
 $('undo').addEventListener('click', async () => {
@@ -321,8 +331,8 @@ function addMessage(role, text = '') {
   const el = document.createElement('article');
   el.className = `msg ${role}`;
   const who = document.createElement('header');
-  who.textContent = { user: 'YOU', error: 'SYSTEM', notice: 'SYSTEM', reminder: 'REMINDER' }[role]
-    ?? assistantName.toUpperCase();
+  who.textContent = { user: t('who.you'), error: t('who.system'), notice: t('who.system'), reminder: t('who.reminder') }[role]
+    ?? speakerFor(assistantName);
   const body = document.createElement('div');
   body.className = 'body';
   body.dir = 'auto';
@@ -345,7 +355,7 @@ function showTool({ id, tool, summary, status, detail }) {
   }
   const icon = { running: '⟳', done: '✓', denied: '✕', error: '!' }[status] ?? '·';
   line.dataset.status = status;
-  line.textContent = `${icon} ${(TOOL_LABELS[tool] ?? tool).toUpperCase()} · ${summary}${detail ? ' — ' + detail : ''}`;
+  line.textContent = `${icon} ${toolLabel(tool).toUpperCase()} · ${summary}${detail ? ' — ' + detail : ''}`;
   scrollDown();
 }
 
@@ -360,9 +370,9 @@ function showPicture(src) {
   fig.className = 'shot';
   const img = document.createElement('img');
   img.src = src;
-  img.alt = 'Picture shared with the assistant';
+  img.alt = t('shot.alt');
   const cap = document.createElement('figcaption');
-  cap.textContent = 'SHARED WITH THE MODEL';
+  cap.textContent = t('shot.caption');
   fig.append(img, cap);
   transcript.append(fig);
   img.addEventListener('load', scrollDown);
@@ -415,14 +425,14 @@ async function send(text, { label } = {}) {
       bubble().textContent += delta;
       speaker?.push(delta);
       scrollDown();
-      reactor.pulse(Math.min(0.5, 0.08 + delta.length / 60));
+      pulse(Math.min(1, 0.25 + delta.length / 40));
     },
-    tool: (t) => {
+    tool: (tl) => {
       speaker?.flush();
       closeBubble();
-      showTool(t);
-      setState(t.status === 'running' ? 'acting' : 'thinking');
-      if (t.status !== 'running') refreshActivity();
+      showTool(tl);
+      setState(tl.status === 'running' ? 'acting' : 'thinking');
+      if (tl.status !== 'running') refreshActivity();
     },
     confirm: (request) => {
       closeBubble();
@@ -438,7 +448,7 @@ async function send(text, { label } = {}) {
     done: () => {
       speaker?.flush();
       const secs = (performance.now() - (firstAt || started)) / 1000;
-      $('throughput').textContent = chars && secs > 0 ? `${Math.round(chars / secs)} chars/s` : '—';
+      $('throughput').textContent = chars && secs > 0 ? t('sys.charsPerSec', { n: Math.round(chars / secs) }) : '—';
       setState(voice.speaking ? 'speaking' : 'idle');
     },
     error: ({ message }) => {
@@ -482,7 +492,7 @@ $('reset').addEventListener('click', async () => {
   transcript.replaceChildren();
   toolLines.clear();
   setContext(false);
-  addMessage('assistant', 'Memory of this conversation cleared, sir.');
+  addMessage('assistant', t('msg.cleared'));
 });
 
 // ── Authorisation card ─────────────────────────────────────────────────────
@@ -497,16 +507,16 @@ const TIMEOUT_MS = 120_000;
 function askConfirmation(request) {
   pending = request;
   const risk = request.risk;
-  $('confirm-risk').textContent = risk === 'CRITICAL' ? 'CRITICAL' : 'CONFIRM';
+  $('confirm-risk').textContent = risk === 'CRITICAL' ? t('confirm.critical') : t('confirm.risk');
   confirmDialog.dataset.risk = risk;
-  $('confirm-tool').textContent = (TOOL_LABELS[request.tool] ?? request.tool).toUpperCase() + ` · ${request.tool}`;
+  $('confirm-tool').textContent = `${toolLabel(request.tool).toUpperCase()} · ${request.tool}`;
   $('confirm-summary').textContent = request.summary;
   $('confirm-args').textContent = request.arguments;
   $('confirm-warning').hidden = !request.externalContent;
   const preview = request.preview?.startsWith('data:image/jpeg;base64,') ? request.preview : null;
   $('confirm-preview-box').hidden = !preview;
   $('confirm-preview').src = preview ?? '';
-  $('confirm-destination').textContent = request.destination ? `Result goes to: ${request.destination}` : '';
+  $('confirm-destination').textContent = request.destination ? t('confirm.destination', { where: request.destination }) : '';
   $('confirm-destination').classList.toggle('cloud', /internet/.test(request.destination ?? ''));
   $('confirm-session').hidden = !request.sessionOption;
 
@@ -562,35 +572,50 @@ const TEXT_FIELDS = [
   'assistantName', 'userName', 'homeCity', 'provider', 'anthropicModel', 'anthropicEffort',
   'ollamaBaseUrl', 'ollamaModel', 'lmStudioBaseUrl', 'lmStudioModel', 'openAiBaseUrl', 'openAiModel',
   'sttLanguage', 'voiceEnglish', 'voiceArabic', 'colabBaseUrl', 'colabModel', 'replyLanguage', 'ttsEngine', 'geminiVoice',
+  'uiLanguage',
 ];
 const CHECK_FIELDS = ['webSearch', 'voiceReplies', 'voiceWake', 'voiceFollowUp', 'morningBriefing', 'startWithWindows', 'colabStt'];
+let secretsCache = {};
 
 function fillSettings(view) {
   const s = view.settings;
   settingsCache = s;
+  secretsCache = view.secrets;
   engineReady = view.engineReady;
   for (const f of TEXT_FIELDS) form.elements[f].value = s[f] ?? '';
   for (const f of CHECK_FIELDS) form.elements[f].checked = Boolean(s[f]);
   form.elements.allowedFolders.value = (s.allowedFolders ?? []).join('\n');
-  $('anthropic-key-state').textContent = view.secrets.anthropic ? '● Key stored in vault' : '○ No key stored';
-  $('openai-key-state').textContent = view.secrets['openai-compatible'] ? '● Key stored in vault' : '○ No key stored';
-  $('gemini-key-state').textContent = view.secrets.gemini
-    ? 'A Google key is saved in Windows Credential Manager. Gemini speaks; Piper takes over if it fails.'
-    : 'Get a key at aistudio.google.com → Get API key. Without one, Piper speaks.';
-  $('colab-key-state').textContent = view.secrets.colab
-    ? '● Token stored in vault — protected by the notebook proxy'
-    : '⚠ No token: if this address goes straight to Ollama, anyone who learns it can use, add or delete '
-      + 'models on your Colab. The notebook (proxy + token) is the protected way.';
-  $('colab-key-state').classList.toggle('warn-text', !view.secrets.colab);
-  applyIdentity(s);
+  applyUi(s);
   showProviderFields();
+}
+
+/** Texts that depend on saved keys; rewritten whenever the language changes. */
+function renderKeyStates() {
+  const v = secretsCache;
+  $('anthropic-key-state').textContent = v.anthropic ? t('settings.keyStored') : t('settings.keyMissing');
+  $('openai-key-state').textContent = v['openai-compatible'] ? t('settings.keyStored') : t('settings.keyMissing');
+  $('gemini-key-state').textContent = v.gemini ? t('settings.geminiKeySaved') : t('settings.geminiKeyMissing');
+  $('colab-key-state').textContent = v.colab ? t('settings.colabTokenSaved') : t('settings.colabTokenMissing');
+  $('colab-key-state').classList.toggle('warn-text', !v.colab);
 }
 
 function applyIdentity(s) {
   assistantName = s.assistantName || 'Haris';
   userName = s.userName || '';
-  $('assistant-name').textContent = assistantName.split('').join('.').toUpperCase() + '.';
-  document.title = assistantName;
+  $('assistant-name').textContent = brandFor(assistantName);
+  document.title = brandFor(assistantName);
+}
+
+/** Interface language: re-render every translated text, then the texts this file writes itself. */
+function applyUi(s) {
+  applyLanguage(s.uiLanguage === 'ar' ? 'ar' : 'en');
+  applyIdentity(s);
+  setState(document.body.dataset.state || 'idle');
+  tickClock();
+  setContext(externalNow);
+  renderKeyStates();
+  refreshVoiceStatus();
+  refreshActivity();
 }
 
 function showProviderFields() {
@@ -621,7 +646,7 @@ async function saveSettings() {
     transcript.replaceChildren();
     toolLines.clear();
     setContext(false);
-    addMessage('notice', 'Settings saved. A fresh conversation has started with the new rules.');
+    addMessage('notice', t('msg.settingsSaved'));
     return true;
   } catch (e) {
     $('settings-error').textContent = e.message;
@@ -641,7 +666,7 @@ async function loadModels() {
       list.append(opt);
     }
     if (res.error) $('settings-error').textContent = res.error;
-    else if (!res.models.length) $('settings-error').textContent = 'No models found. Is the engine running?';
+    else if (!res.models.length) $('settings-error').textContent = t('msg.noModels');
   } catch (e) {
     $('settings-error').textContent = e.message;
   }
@@ -652,9 +677,7 @@ $('open-settings').addEventListener('click', async () => {
   $('settings-error').textContent = '';
   const auto = await api('/api/system/autostart').catch(() => ({ available: false }));
   form.elements.startWithWindows.disabled = !auto.available;
-  $('autostart-hint').textContent = auto.available
-    ? 'Adds one entry to your Windows sign-in programs; untick to remove it.'
-    : 'Available in the installed app (package.ps1), not when running from source.';
+  $('autostart-hint').textContent = auto.available ? t('settings.autostartOn') : t('settings.autostartOff');
   dialog.showModal();
   loadModels();
 });
@@ -692,7 +715,7 @@ async function showMemory() {
   if (!data.facts.length) {
     const li = document.createElement('li');
     li.className = 'empty';
-    li.textContent = 'Nothing remembered yet. Tell Haris something worth keeping and approve it.';
+    li.textContent = t('memory.empty');
     list.append(li);
   }
   for (const f of [...data.facts].reverse()) {
@@ -704,12 +727,12 @@ async function showMemory() {
     text.className = 'fact';
     text.dir = 'auto';
     text.textContent = f.text;
-    text.title = `Remembered ${new Date(f.created).toLocaleString()}`;
+    text.title = t('memory.remembered', { when: new Date(f.created).toLocaleString(locale()) });
     const del = document.createElement('button');
     del.type = 'button';
     del.className = 'btn ghost danger';
     del.textContent = '✕';
-    del.title = 'Forget this';
+    del.title = t('memory.forgetOne');
     del.addEventListener('click', async () => {
       await api(`/api/memory/${encodeURIComponent(f.id)}`, { method: 'DELETE' });
       showMemory();
@@ -725,7 +748,7 @@ $('open-memory').addEventListener('click', () => {
 });
 $('close-memory').addEventListener('click', () => memoryDialog.close());
 $('memory-wipe').addEventListener('click', async () => {
-  if (!window.confirm('Forget everything Haris remembers about you? This cannot be undone.')) return;
+  if (!window.confirm(t('memory.wipeConfirm'))) return;
   await api('/api/memory', { method: 'DELETE' });
   showMemory();
 });
@@ -738,23 +761,25 @@ async function start() {
   $('endpoint').textContent = `127.0.0.1:${location.port}`;
 
   if (!hasToken()) {
-    $('session').textContent = 'NOT AUTHORISED';
-    addMessage('error', 'This window has no session token. Start Haris from its launcher so it can open its own window.');
+    $('session').textContent = t('sec.notAuthorised');
+    addMessage('error', t('msg.noToken'));
     setState('error');
     return;
   }
-  $('session').textContent = 'Token verified';
+  $('session').textContent = t('sec.verified');
 
   try {
     const view = await api('/api/settings');
     settingsCache = view.settings;
+    secretsCache = view.secrets;
     engineReady = view.engineReady;
-    applyIdentity(view.settings);
+    applyUi(view.settings);
     loadModels();
     applyVoiceSettings(view.settings);
   } catch (e) {
     addMessage('error', e.message);
   }
+  $('session').textContent = t('sec.verified');
 
   refreshSystem();
   refreshActivity();
@@ -764,28 +789,29 @@ async function start() {
   subscribeEvents({
     notification: ({ title, message }) => {
       addMessage('reminder', `${title}: ${message}`);
-      reactor.pulse(0.8);
+      pulse(0.8);
     },
     // The core asks for a photo only after the user approved look_through_camera.
     camera: ({ id }) => takePhoto(id, {
       onCameraState: (on) => { $('cam-badge').hidden = !on; },
       onFlash: flash,
-    }).catch(() => addMessage('error', 'The camera photo could not be taken.')),
+    }).catch(() => addMessage('error', t('msg.cameraFailed'))),
   });
   input.focus();
 
-  // Haris greets out loud as soon as it opens, in English; replies follow the language the user
-  // speaks (Settings → "replies in": auto). On a fresh install (no engine yet) it says how to start
-  // and opens Configure; otherwise the daily briefing (once a day) or a short greeting.
+  // Haris greets out loud as soon as it opens, in the interface language; replies follow the
+  // language the user speaks (Settings → "replies in"). On a fresh install (no engine yet) it says
+  // how to start and opens Settings; otherwise the daily briefing (once a day) or a short greeting.
   const briefing = engineReady ? await api('/api/briefing/claim', { method: 'POST' }).catch(() => null) : null;
   setTimeout(() => {
     if (!engineReady) {
-      greet(`Hello, I'm ${assistantName}. Choose an engine in Configure and we can begin.`);
+      greet(t('greet.setup', { name: /^haris$/i.test(assistantName) ? t('brand.short') : assistantName }));
       $('open-settings').click();
     } else if (briefing?.prompt) {
-      send(briefing.prompt, { label: '☀ Daily briefing' });
+      send(briefing.prompt, { label: t('label.dailyBriefing') });
     } else {
-      greet(`Good ${partOfDay()}${namePart()}. All systems are online.`);
+      const who = userName ? t('greet.whoName', { name: userName }) : t('greet.whoDefault');
+      greet(t(`greet.${partOfDay()}`, { who }));
     }
   }, 1600);
 }
@@ -799,9 +825,6 @@ function greet(text) {
 function partOfDay() {
   const h = new Date().getHours();
   return h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
-}
-function namePart() {
-  return userName ? `, ${userName}` : ', sir';
 }
 
 start();
