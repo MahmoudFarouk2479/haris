@@ -7,7 +7,7 @@ apps, manage files, search the web, see your screen, talk and listen — **witho
 Every action goes through a permission gate you control, keys live in the OS vault, and the server
 is unreachable from anything but its own window.
 
-Java 21 + Spring Boot core · Three.js HUD · your choice of brain:
+Java 21 + Spring Boot core · SVG HUD (English or Arabic) · your choice of brain:
 **Claude**, **Ollama**, **LM Studio**, **any OpenAI-compatible API**, or **Ollama on a free Google Colab GPU**.
 
 > *Haris* (حارس) means *guardian* in Arabic. Built after auditing a popular open-source assistant that opened firewall ports, switched the
@@ -23,6 +23,8 @@ Java 21 + Spring Boot core · Three.js HUD · your choice of brain:
 | Answers with live tools | Asks before acting | Speaks Egyptian Arabic |
 |---|---|---|
 | ![English answer](docs/media/02-english-answer.png) | ![Approval card](docs/media/03-approval.png) | ![Arabic answer](docs/media/05-arabic.png) |
+
+<p align="center"><img src="docs/media/06-voice-mode.png" width="720" alt="Voice mode: hide the conversation, keep the input" /><br/><em>Voice mode: hide the conversation, keep the input</em></p>
 
 ## Features
 
@@ -131,7 +133,7 @@ Conversations are kept in memory only and vanish when Haris closes.
 | Engine | Runs | Job |
 |---|---|---|
 | Vosk + `vosk-model-small-en-us` | inside Haris | "Hey Haris" — decodes only while someone is speaking |
-| Whisper (`small-int8`) | Docker, `127.0.0.1:10300` | speech → text, Arabic and English |
+| Whisper (`small`) | Docker, `127.0.0.1:10300`, NVIDIA GPU if present, else CPU | speech → text, Arabic and English |
 | Piper | Docker, `127.0.0.1:10200` | text → speech (`en_GB-alan-medium`, `ar_JO-kareem-medium`) |
 | Gemini TTS *(optional)* | Google, your AI Studio key | natural text → speech, including Egyptian Arabic; Piper takes over if it fails |
 
@@ -139,6 +141,19 @@ Push-to-talk: hold **Ctrl+Space** or click the microphone. A **MIC** badge shows
 microphone is open. Containers are hardened: loopback ports, read-only root filesystem, all
 capabilities dropped, no-new-privileges, memory/CPU caps, pinned image versions; they start and stop
 with Haris. Set `WHISPER_OFFLINE=true` in `voice/.env` after the first start to forbid model downloads.
+
+**GPU.** With an NVIDIA GPU (Docker Desktop's `nvidia` runtime plus a working `nvidia-smi`), Haris
+starts Whisper from `voice/compose.gpu.yaml` on top of `compose.yaml`: same port, same hardening
+except the GPU device, the image and a 3 GB memory cap (see the comments in that file). If the GPU
+container does not answer, Haris falls back to the CPU container by itself; the Voice drawer shows
+**● Online (GPU)** when the GPU is in use. Set `HARIS_WHISPER_GPU=false` (environment variable, or a line in
+`voice/.env`) to always use the CPU. On an MX450 (2 GB) a short phrase transcribes in ~1.0 s on the
+GPU versus ~1.5 s on the CPU, using ~0.4 GB of video memory. The GPU image is several GB: on the
+first launch Haris starts on the CPU at once and downloads it in the background (progress is in the
+log; a download cut short continues at the next start), then uses the GPU from the next start. If
+the GPU container fails, Haris stays on the CPU for three days (delete `~/.haris/whisper-gpu-failed`
+to retry sooner). The GPU file needs Docker Compose 2.24.4 or later; older versions use the CPU.
+`WHISPER_OFFLINE=true` applies to the GPU container too.
 
 **Speed.** On a laptop CPU a voice turn takes several seconds: Whisper ~3–4 s, the first spoken
 sentence ~1.5–2.5 s, plus the model. Faster options: Colab speech-to-text, a smaller Whisper
@@ -168,7 +183,7 @@ src/main/java/dev/haris/
   web/        WebSearchTool, FetchPageTool, PageFetcher (pinned DNS), NetGuard (SSRF rules)
   memory/     MemoryStore (AES-256-GCM), remember / recall / forget
   settings/   Settings, validation; system/ briefing, autostart, engines; launcher/ app window
-ui/           Vite + Three.js HUD
+ui/           Vite HUD: SVG emblem, drawers, English/Arabic strings
 voice/ search/  Docker Compose files for the local engines
 colab/        notebook, its generator, and the token proxy
 models/       fetch-models.ps1 (the model itself is downloaded, not committed)

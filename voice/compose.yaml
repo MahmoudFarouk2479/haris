@@ -33,7 +33,10 @@ services:
               "--beam-size", "1", "--cpu-threads", "4", "--vad-filter",
               "--initial-prompt", "Haris"]
     environment:
+      # wyoming-faster-whisper reads WYO_WHISPER_<OPTION> itself, so this holds in both images (the GPU
+      # one bypasses its image scripts); HF_HUB_OFFLINE makes huggingface_hub refuse downloads too.
       WYO_WHISPER_LOCAL_FILES_ONLY: "${WHISPER_OFFLINE:-false}"
+      HF_HUB_OFFLINE: "${WHISPER_OFFLINE:-false}"
     ports: ["127.0.0.1:10300:10300"]
     volumes: ["whisper-data:/data"]
     mem_limit: 2g

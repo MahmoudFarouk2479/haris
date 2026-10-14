@@ -50,10 +50,15 @@ public class ConversationService {
         current = fresh();
     }
 
-    /** New settings mean new rules (folders, engine, tools): start a clean conversation. */
+    /**
+     * New settings mean new rules (folders, engine, tools): start a clean conversation. Switching
+     * only the HUD's language (or saving without changes) keeps it, approvals and all.
+     */
     @EventListener
     public void onSettingsChanged(SettingsService.SettingsChanged event) {
-        reset();
+        if (!event.sameRules()) {
+            reset();
+        }
     }
 
     private Conversation fresh() {

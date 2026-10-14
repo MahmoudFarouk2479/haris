@@ -9,9 +9,9 @@
     "test": "node --test \"src/**/*.test.js\""
   },
   "dependencies": {
+    "@fontsource/ibm-plex-sans-arabic": "5.3.0",
     "@fontsource/orbitron": "5.3.0",
-    "@fontsource/rajdhani": "5.3.0",
-    "three": "0.186.1"
+    "@fontsource/rajdhani": "5.3.0"
   },
   "devDependencies": {
     "vite": "8.3.4"

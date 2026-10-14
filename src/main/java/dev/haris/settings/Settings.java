@@ -63,7 +63,9 @@ public record Settings(
         /** piper: spoken replies made on this PC; gemini: Google's natural voices (reply text goes to Google). */
         @Pattern(regexp = "piper|gemini") String ttsEngine,
         /** One of Gemini's prebuilt voice names. */
-        @Size(max = 20) String geminiVoice) {
+        @Size(max = 20) String geminiVoice,
+        /** The HUD's own language: en (default) or ar (right-to-left). Replies follow replyLanguage. */
+        @Pattern(regexp = "en|ar") String uiLanguage) {
 
     /** Piper voice ids look like en_GB-alan-medium. */
     public static final String VOICE_NAME = "[a-z]{2,3}_[A-Z]{2}-[A-Za-z0-9_]{1,40}-(x_low|low|medium|high)";
@@ -82,7 +84,7 @@ public record Settings(
                 true, false,
                 "", "",
                 "auto", true, true,
-                "piper", "Charon");
+                "piper", "Charon", "en");
     }
 
     /** Fills fields that older settings files did not have. */
@@ -116,7 +118,8 @@ public record Settings(
                 voiceFollowUp != null ? voiceFollowUp : d.voiceFollowUp,
                 colabStt != null ? colabStt : d.colabStt,
                 ttsEngine != null ? ttsEngine : d.ttsEngine,
-                geminiVoice != null ? geminiVoice : d.geminiVoice);
+                geminiVoice != null ? geminiVoice : d.geminiVoice,
+                uiLanguage != null ? uiLanguage : d.uiLanguage);
     }
 
     /** A copy with the Colab address replaced (used after normalisation). */
@@ -124,7 +127,7 @@ public record Settings(
         return new Settings(assistantName, userName, provider, anthropicModel, anthropicEffort, webSearch,
                 ollamaBaseUrl, ollamaModel, lmStudioBaseUrl, lmStudioModel, openAiBaseUrl, openAiModel,
                 allowedFolders, homeCity, voiceReplies, voiceWake, sttLanguage, voiceEnglish, voiceArabic,
-                morningBriefing, startWithWindows, url, colabModel, replyLanguage, voiceFollowUp, colabStt, ttsEngine, geminiVoice);
+                morningBriefing, startWithWindows, url, colabModel, replyLanguage, voiceFollowUp, colabStt, ttsEngine, geminiVoice, uiLanguage);
     }
 
     /** A copy with the granted folders replaced (used after validation). */
@@ -132,7 +135,15 @@ public record Settings(
         return new Settings(assistantName, userName, provider, anthropicModel, anthropicEffort, webSearch,
                 ollamaBaseUrl, ollamaModel, lmStudioBaseUrl, lmStudioModel, openAiBaseUrl, openAiModel,
                 folders, homeCity, voiceReplies, voiceWake, sttLanguage, voiceEnglish, voiceArabic,
-                morningBriefing, startWithWindows, colabBaseUrl, colabModel, replyLanguage, voiceFollowUp, colabStt, ttsEngine, geminiVoice);
+                morningBriefing, startWithWindows, colabBaseUrl, colabModel, replyLanguage, voiceFollowUp, colabStt, ttsEngine, geminiVoice, uiLanguage);
+    }
+
+    /** A copy with the HUD's language replaced (used to tell a language switch from a rule change). */
+    public Settings withUiLanguage(String language) {
+        return new Settings(assistantName, userName, provider, anthropicModel, anthropicEffort, webSearch,
+                ollamaBaseUrl, ollamaModel, lmStudioBaseUrl, lmStudioModel, openAiBaseUrl, openAiModel,
+                allowedFolders, homeCity, voiceReplies, voiceWake, sttLanguage, voiceEnglish, voiceArabic,
+                morningBriefing, startWithWindows, colabBaseUrl, colabModel, replyLanguage, voiceFollowUp, colabStt, ttsEngine, geminiVoice, language);
     }
 
     private static List<String> defaultFolders() {

@@ -77,6 +77,10 @@ public class VoiceController {
             status.put("wake", wake);
             status.put("wakeWords", wake ? List.of(WakeWordSocket.WAKE_WORD) : List.of());
             status.put("sttRoute", colab.target().isPresent() ? "colab" : "local");
+            String device = startup.sttDevice();
+            if (device != null) {
+                status.put("sttDevice", device);   // where the local Whisper runs: "gpu" or "cpu"
+            }
             long resumeAt = gemini.pausedUntil();
             boolean paused = resumeAt > System.currentTimeMillis();
             status.put("ttsRoute", !gemini.selected() ? "local" : paused ? "gemini-paused" : "gemini");

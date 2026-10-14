@@ -47,6 +47,23 @@ class VoiceControllerTest {
         verifyNoInteractions(engines, startup);
     }
 
+    @Test
+    void statusSaysWhereSpeechToTextRuns() {
+        VoiceEngines engines = mock(VoiceEngines.class);
+        when(engines.status()).thenReturn(java.util.Map.of("stt", true, "tts", true));
+        EnginesService startup = mock(EnginesService.class);
+        when(startup.sttDevice()).thenReturn("gpu");
+        VoiceController controller = new VoiceController(engines, mock(ColabSpeech.class),
+                mock(WakeWordDetector.class), mock(GeminiSpeech.class), mock(SettingsService.class), startup);
+        assertThat(controller.status()).containsEntry("sttDevice", "gpu").containsEntry("stt", true);
+
+        // Before the engines have started, no device is claimed.
+        VoiceController early = new VoiceController(engines, mock(ColabSpeech.class),
+                mock(WakeWordDetector.class), mock(GeminiSpeech.class), mock(SettingsService.class),
+                mock(EnginesService.class));
+        assertThat(early.status()).doesNotContainKey("sttDevice");
+    }
+
     private static byte[] tone(double seconds, double amplitude) {
         int n = (int) (16_000 * seconds);
         byte[] pcm = new byte[n * 2];

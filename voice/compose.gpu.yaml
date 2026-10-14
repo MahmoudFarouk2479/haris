@@ -1,0 +1,54 @@
+# GPU override for speech-to-text. Haris layers it on top of compose.yaml when Docker has the
+# NVIDIA runtime and the host has nvidia-smi:
+#
+#   docker compose -f voice/compose.yaml -f voice/compose.gpu.yaml up -d
+#
+# Only the whisper service changes; Piper stays as it is. The Wyoming endpoint is the same
+# (127.0.0.1:10300), so the rest of Haris does not know which one answers. If this container does
+# not come up, Haris starts the CPU one from compose.yaml alone instead. The image is several GB:
+# when it is not on this machine yet, Haris starts the CPU Whisper and downloads it in the
+# background, and uses the GPU from the next start.
+#
+# Hardening kept from compose.yaml (merged in): read-only root filesystem, tmpfs /tmp, no Linux
+# capabilities, no privilege escalation, 127.0.0.1-only port, memory/CPU caps, local log driver,
+# offline mode (WHISPER_OFFLINE: the Python server reads WYO_WHISPER_LOCAL_FILES_ONLY itself, and
+# huggingface_hub HF_HUB_OFFLINE), pinned image (tag and digest). Differences, and why:
+#   * the GPU is passed in (device request for one NVIDIA GPU) — that is the point of the file;
+#   * a different image: linuxserver/faster-whisper's CUDA build of the same wyoming-faster-whisper
+#     3.8.1 that compose.yaml runs on the CPU. Its s6-overlay init (/init) wants to chown and switch
+#     users, which would need extra capabilities, so it is bypassed: the entrypoint runs the Python
+#     server directly, with the CUDA library path the image's own run script would have set. With
+#     that, no capability, no writable root and no extra tmpfs is needed;
+#   * a separate model volume (whisper-gpu-data): the GPU uses the float16-capable "small" model,
+#     the CPU the int8 one, and a half-written download in one must not break the other.
+# It runs as root inside the container, like the CPU container, but with every capability dropped.
+
+services:
+  whisper:
+    # Pinned by digest as well as tag: a linuxserver tag is rebuilt in place now and then.
+    image: lscr.io/linuxserver/faster-whisper:gpu-v3.8.1-ls71@sha256:45864167538e51dd843545291f71b7f2420bd12d8190d98948d6d9ddb939e50c
+    entrypoint: ["/lsiopy/bin/python3", "-m", "wyoming_faster_whisper"]
+    # Same decoding settings as on the CPU: beam 1, VAD trimming, "Haris" as the initial prompt.
+    command: ["--uri", "tcp://0.0.0.0:10300",
+              "--model", "${WHISPER_GPU_MODEL:-small}", "--compute-type", "${WHISPER_GPU_COMPUTE:-int8_float16}",
+              "--device", "cuda", "--data-dir", "/data",
+              "--beam-size", "1", "--vad-filter", "--initial-prompt", "Haris"]
+    environment:
+      LD_LIBRARY_PATH: /lsiopy/lib/python3.12/site-packages/nvidia/cublas/lib:/lsiopy/lib/python3.12/site-packages/nvidia/cudnn/lib
+      TMPDIR: /tmp
+      HOME: /tmp
+    volumes: !override ["whisper-gpu-data:/data"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    # CUDA runtime + cuDNN are loaded into host memory too; 3 GB leaves room for them and the model.
+    mem_limit: 3g
+    labels:
+      dev.haris.stt-device: gpu
+
+volumes:
+  whisper-gpu-data:

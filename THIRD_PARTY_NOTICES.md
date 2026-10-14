@@ -18,7 +18,7 @@ license. Check this list again before using Haris in a commercial product.
 | java-keyring | Windows Credential Manager | BSD-3-Clause |
 | Vosk (`com.alphacephei:vosk`) | wake word | Apache-2.0 |
 | `vosk-model-small-en-us-0.15` | wake-word model | Apache-2.0 ([source](https://alphacephei.com/vosk/models)) |
-| three.js | HUD graphics | MIT |
+| IBM Plex Sans Arabic (via @fontsource) | Arabic interface font | SIL Open Font License 1.1 |
 | Orbitron, Rajdhani (via @fontsource) | HUD fonts | SIL Open Font License 1.1 |
 
 ## Downloaded and run separately, on your machine or your Colab session
@@ -29,6 +29,7 @@ the first time they are used.
 | Component | Used for | License |
 |---|---|---|
 | `rhasspy/wyoming-whisper`, faster-whisper, Whisper models | speech-to-text | MIT |
+| `lscr.io/linuxserver/faster-whisper:gpu-v3.8.1-ls71` (GPU speech-to-text, only with an NVIDIA GPU) | speech-to-text on the GPU | image build files GPL-3.0 (run unmodified); wyoming-faster-whisper, faster-whisper, CTranslate2 MIT; NVIDIA cuBLAS/cuDNN under the NVIDIA software license |
 | `rhasspy/wyoming-piper`, Piper | text-to-speech | MIT (engine) |
 | Piper voices (`en_GB-alan-medium`, `ar_JO-kareem-medium`, …) | voices | **per voice** — see each voice's `MODEL_CARD` before commercial use |
 | SearXNG (`searxng/searxng`) | private web search | AGPL-3.0 (run unmodified as a separate service) |

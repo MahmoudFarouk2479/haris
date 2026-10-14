@@ -15,7 +15,7 @@ class SettingsValidationTest {
     private static Settings with(String ollama, String cloud) {
         return new Settings("Haris", "", ProviderKind.OLLAMA, "claude-opus-5-5", "medium", false,
                 ollama, "", "http://127.0.0.1:1234", "", cloud, "", List.of(), "",
-                true, false, "auto", "en_GB-alan-medium", "ar_JO-kareem-medium", true, false, "", "", "auto", true, true, "piper", "Charon");
+                true, false, "auto", "en_GB-alan-medium", "ar_JO-kareem-medium", true, false, "", "", "auto", true, true, "piper", "Charon", "en");
     }
 
     @Test
@@ -51,7 +51,7 @@ class SettingsValidationTest {
     private static Settings withColab(String url) {
         return new Settings("Haris", "", ProviderKind.COLAB, "claude-opus-5-5", "medium", false,
                 "http://127.0.0.1:11434", "", "http://127.0.0.1:1234", "", "", "", List.of(), "",
-                true, false, "auto", "en_GB-alan-medium", "ar_JO-kareem-medium", true, false, url, "qwen2.5:7b", "auto", true, true, "piper", "Charon");
+                true, false, "auto", "en_GB-alan-medium", "ar_JO-kareem-medium", true, false, url, "qwen2.5:7b", "auto", true, true, "piper", "Charon", "en");
     }
 
     @Test
@@ -109,6 +109,32 @@ class SettingsValidationTest {
                 d.webSearch(), d.ollamaBaseUrl(), d.ollamaModel(), d.lmStudioBaseUrl(), d.lmStudioModel(),
                 d.openAiBaseUrl(), d.openAiModel(), d.allowedFolders(), d.homeCity(), d.voiceReplies(), d.voiceWake(),
                 d.sttLanguage(), d.voiceEnglish(), d.voiceArabic(), d.morningBriefing(), d.startWithWindows(),
-                d.colabBaseUrl(), d.colabModel(), d.replyLanguage(), d.voiceFollowUp(), d.colabStt(), engine, voice);
+                d.colabBaseUrl(), d.colabModel(), d.replyLanguage(), d.voiceFollowUp(), d.colabStt(), engine, voice, d.uiLanguage());
+    }
+
+    @Test
+    void interfaceLanguageIsEnglishOrArabic() {
+        assertThat(Settings.defaults().uiLanguage()).isEqualTo("en");
+        SettingsService.validateInterface(withUi("en"));
+        SettingsService.validateInterface(withUi("ar"));
+        assertThatThrownBy(() -> SettingsService.validateInterface(withUi("fr")))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> SettingsService.validateInterface(withUi(null)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void olderSettingsFilesGetEnglish() {
+        assertThat(withUi(null).withDefaults().uiLanguage()).isEqualTo("en");
+    }
+
+    private static Settings withUi(String lang) {
+        Settings d = Settings.defaults();
+        return new Settings(d.assistantName(), d.userName(), d.provider(), d.anthropicModel(), d.anthropicEffort(),
+                d.webSearch(), d.ollamaBaseUrl(), d.ollamaModel(), d.lmStudioBaseUrl(), d.lmStudioModel(),
+                d.openAiBaseUrl(), d.openAiModel(), d.allowedFolders(), d.homeCity(), d.voiceReplies(), d.voiceWake(),
+                d.sttLanguage(), d.voiceEnglish(), d.voiceArabic(), d.morningBriefing(), d.startWithWindows(),
+                d.colabBaseUrl(), d.colabModel(), d.replyLanguage(), d.voiceFollowUp(), d.colabStt(), d.ttsEngine(),
+                d.geminiVoice(), lang);
     }
 }
