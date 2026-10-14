@@ -6,6 +6,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import dev.haris.settings.Settings;
@@ -40,6 +42,16 @@ public class VoiceController {
 
     private final VoiceEngines engines;
     private final ColabSpeech colab;
+    /** 80 ms of 16 kHz 16-bit audio, the HUD's frame size. */
+    private static final int FRAME_BYTES = VoiceEngines.RATE * 2 * 80 / 1000;
+    /** A frame this loud counts as speech (the HUD's own threshold is a little higher). */
+    private static final double VOICED_RMS = 0.02;
+    /** About a third of a second of voiced audio: the shortest real word. */
+    private static final int MIN_VOICED_FRAMES = 4;
+    /** How long a new recording may wait for the previous one before it is refused. */
+    private static final Duration BUSY_WAIT = Duration.ofSeconds(2);
+
+    private final Semaphore transcribing = new Semaphore(1);
     private final WakeWordDetector wakeWord;
     private final GeminiSpeech gemini;
     private final SettingsService settings;
@@ -78,6 +90,44 @@ public class VoiceController {
         if (pcm.length < VoiceEngines.RATE / 5 || pcm.length > MAX_AUDIO_BYTES || pcm.length % 2 != 0) {
             return ResponseEntity.badRequest().body(Map.of("error", "Recording too short or too long."));
         }
+        // Silence, room noise and clicks never reach the engine: on a laptop CPU each one costs
+        // seconds, and Whisper "hears" words in noise anyway.
+        if (!hasSpeech(pcm)) {
+            return ResponseEntity.ok(Map.of("text", "", "via", "none"));
+        }
+        // One recording at a time. A second one is refused rather than queued, so the user is never
+        // waiting behind a backlog of old recordings.
+        boolean acquired;
+        try {
+            acquired = transcribing.tryAcquire(BUSY_WAIT.toMillis(), TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            acquired = false;
+        }
+        if (!acquired) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("error", "Still working on the previous recording. Say it again in a moment."));
+        }
+        try {
+            return transcribeNow(pcm);
+        } finally {
+            transcribing.release();
+        }
+    }
+
+    /** True when at least {@link #MIN_VOICED_FRAMES} 80 ms frames are loud enough to be speech. */
+    static boolean hasSpeech(byte[] pcm) {
+        int voiced = 0;
+        for (int off = 0; off + FRAME_BYTES <= pcm.length; off += FRAME_BYTES) {
+            if (WakeWordDetector.rms(java.util.Arrays.copyOfRange(pcm, off, off + FRAME_BYTES)) >= VOICED_RMS
+                    && ++voiced >= MIN_VOICED_FRAMES) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private ResponseEntity<Map<String, String>> transcribeNow(byte[] pcm) {
         String lang = settings.get().sttLanguage();
         String language = "auto".equals(lang) ? null : lang;
         Optional<ColabSpeech.Target> gpu = colab.available();

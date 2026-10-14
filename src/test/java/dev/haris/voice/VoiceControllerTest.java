@@ -47,6 +47,72 @@ class VoiceControllerTest {
         verifyNoInteractions(engines, startup);
     }
 
+    private static byte[] tone(double seconds, double amplitude) {
+        int n = (int) (16_000 * seconds);
+        byte[] pcm = new byte[n * 2];
+        for (int i = 0; i < n; i++) {
+            short s = (short) (Math.sin(2 * Math.PI * 220 * i / 16_000.0) * amplitude * 32767);
+            pcm[2 * i] = (byte) s;
+            pcm[2 * i + 1] = (byte) (s >> 8);
+        }
+        return pcm;
+    }
+
+    private VoiceController transcribing(VoiceEngines engines) {
+        SettingsService settings = mock(SettingsService.class);
+        when(settings.get()).thenReturn(Settings.defaults());
+        ColabSpeech colab = mock(ColabSpeech.class);
+        when(colab.available()).thenReturn(java.util.Optional.empty());
+        return new VoiceController(engines, colab, mock(WakeWordDetector.class), mock(GeminiSpeech.class),
+                settings, mock(EnginesService.class));
+    }
+
+    @Test
+    void recordingsWithoutSpeechAreNotTranscribed() throws Exception {
+        VoiceEngines engines = mock(VoiceEngines.class);
+        VoiceController controller = transcribing(engines);
+
+        // one second of silence, and one of faint room noise
+        assertThat(controller.transcribe(new byte[32_000]).getBody()).containsEntry("text", "");
+        assertThat(controller.transcribe(tone(1.0, 0.004)).getBody()).containsEntry("text", "");
+        // a click: loud, but far too short to be a word
+        byte[] click = new byte[32_000];
+        System.arraycopy(tone(0.16, 0.5), 0, click, 0, tone(0.16, 0.5).length);
+        assertThat(controller.transcribe(click).getBody()).containsEntry("text", "");
+        verifyNoInteractions(engines);
+    }
+
+    @Test
+    void speechIsTranscribed() throws Exception {
+        VoiceEngines engines = mock(VoiceEngines.class);
+        when(engines.transcribe(any(), any())).thenReturn("hello");
+        assertThat(transcribing(engines).transcribe(tone(1.0, 0.3)).getBody()).containsEntry("text", "hello");
+    }
+
+    @Test
+    void aNewRecordingWhileOneIsStillBeingTranscribedIsRefusedNotQueued() throws Exception {
+        VoiceEngines engines = mock(VoiceEngines.class);
+        java.util.concurrent.CountDownLatch inside = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch release = new java.util.concurrent.CountDownLatch(1);
+        when(engines.transcribe(any(), any())).thenAnswer(call -> {
+            inside.countDown();
+            release.await();
+            return "first";
+        });
+        VoiceController controller = transcribing(engines);
+        var first = java.util.concurrent.CompletableFuture.supplyAsync(() -> controller.transcribe(tone(1.0, 0.3)));
+        assertThat(inside.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+
+        try {
+            var second = assertTimeoutPreemptively(Duration.ofSeconds(5), () -> controller.transcribe(tone(1.0, 0.3)));
+            assertThat(second.getStatusCode().value()).isEqualTo(429);
+            assertThat(second.getBody().get("error")).contains("previous recording");
+        } finally {
+            release.countDown();
+        }
+        assertThat(first.get(5, java.util.concurrent.TimeUnit.SECONDS).getBody()).containsEntry("text", "first");
+    }
+
     @Test
     void geminiSpeaksWhenChosenAndPiperIsNotUsed() throws Exception {
         VoiceEngines engines = mock(VoiceEngines.class);
