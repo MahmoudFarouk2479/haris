@@ -1,28 +1,25 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="referrer" content="no-referrer" />
   <title>H.A.R.I.S.</title>
+  <link rel="icon" type="image/svg+xml" href="./src/favicon.svg" />
   <script type="module" src="/src/main.js"></script>
 </head>
 <body data-state="idle">
-  <canvas id="reactor" aria-hidden="true"></canvas>
-  <div class="vignette" aria-hidden="true"></div>
-  <div class="scanlines" aria-hidden="true"></div>
-
-  <main class="hud">
+  <div class="app">
     <header class="topbar">
       <div class="brand">
-        <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
-          <circle cx="20" cy="20" r="17" />
-          <circle cx="20" cy="20" r="11" />
-          <path d="M20 10 L29 25 L11 25 Z" />
+        <svg class="brand-mark" viewBox="-100 -100 200 200" aria-hidden="true">
+          <rect x="-58" y="-58" width="116" height="116" />
+          <rect x="-58" y="-58" width="116" height="116" transform="rotate(45)" />
+          <circle class="core" r="18" />
         </svg>
         <div>
           <h1 id="assistant-name">H.A.R.I.S.</h1>
-          <p class="sub">Just A Rather Very Intelligent System</p>
+          <p class="tagline" data-i18n="brand.tagline">Your private guardian</p>
         </div>
       </div>
 
@@ -31,11 +28,11 @@
           <span class="state-dot"></span>
           <span id="state-label">STANDBY</span>
         </div>
-        <div class="mic-badge" id="mic-badge" hidden title="The microphone is open">
+        <div class="mic-badge" id="mic-badge" hidden data-i18n-title="mic.title" title="The microphone is open">
           <span class="mic-dot"></span><span id="mic-label">MIC</span>
         </div>
-        <div class="mic-badge cam-badge" id="cam-badge" hidden title="The camera is on">
-          <span class="mic-dot"></span><span>CAMERA ON</span>
+        <div class="mic-badge cam-badge" id="cam-badge" hidden data-i18n-title="cam.title" title="The camera is on">
+          <span class="mic-dot"></span><span data-i18n="cam.on">CAMERA ON</span>
         </div>
       </div>
 
@@ -45,79 +42,141 @@
       </div>
     </header>
 
-    <aside class="panel panel-left" aria-label="System telemetry">
-      <h2><span>01</span> System</h2>
+    <nav class="rail" aria-label="Panels">
+      <button class="rail-btn" type="button" data-drawer="system" aria-expanded="false" aria-controls="drawer-system"
+              data-i18n-title="rail.system" data-i18n-aria="rail.system" title="System" aria-label="System">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></svg>
+      </button>
+      <button class="rail-btn" type="button" data-drawer="activity" aria-expanded="false" aria-controls="drawer-activity"
+              data-i18n-title="rail.activity" data-i18n-aria="rail.activity" title="Activity" aria-label="Activity">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3 7 4-14 3 7h4" /></svg>
+      </button>
+      <button class="rail-btn" type="button" data-drawer="voice" aria-expanded="false" aria-controls="drawer-voice"
+              data-i18n-title="rail.voice" data-i18n-aria="rail.voice" title="Voice" aria-label="Voice">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg>
+      </button>
+      <button class="rail-btn" type="button" data-drawer="security" aria-expanded="false" aria-controls="drawer-security"
+              data-i18n-title="rail.security" data-i18n-aria="rail.security" title="Security" aria-label="Security">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /><path d="M9 12l2 2 4-4" /></svg>
+      </button>
+      <button class="rail-btn" type="button" id="open-memory"
+              data-i18n-title="rail.memory" data-i18n-aria="rail.memory" title="Memory" aria-label="Memory">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9z" /><path d="M12 8l4 4-4 4-4-4z" /></svg>
+      </button>
+      <span class="rail-spacer"></span>
+      <button class="rail-btn" type="button" id="open-settings"
+              data-i18n-title="rail.settings" data-i18n-aria="rail.settings" title="Settings" aria-label="Settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" /></svg>
+      </button>
+    </nav>
 
-      <div class="gauge">
-        <div class="gauge-head"><span>CPU LOAD</span><b id="cpu-value">--%</b></div>
-        <div class="bar"><i id="cpu-bar"></i></div>
-        <canvas id="cpu-spark" class="spark" width="260" height="46"></canvas>
-      </div>
+    <div class="drawers">
+      <aside class="drawer" id="drawer-system" hidden aria-labelledby="drawer-system-title">
+        <div class="drawer-head">
+          <h2 id="drawer-system-title" data-i18n="rail.system">System</h2>
+          <button class="icon-btn pin-btn" type="button" data-pin aria-pressed="false" data-i18n-title="drawer.pin" data-i18n-aria="drawer.pin" title="Pin open" aria-label="Pin open">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6l-1 6 4 4H6l4-4zM12 14v6" /></svg>
+          </button>
+          <button class="icon-btn" type="button" data-drawer-close data-i18n-title="drawer.close" data-i18n-aria="drawer.close" title="Close" aria-label="Close">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
+        </div>
+        <div class="gauge">
+          <div class="gauge-head"><span data-i18n="sys.cpu">CPU load</span><b id="cpu-value">--%</b></div>
+          <div class="bar"><i id="cpu-bar"></i></div>
+          <canvas id="cpu-spark" class="spark" width="260" height="46"></canvas>
+        </div>
+        <div class="gauge">
+          <div class="gauge-head"><span data-i18n="sys.memory">Memory</span><b id="mem-value">--</b></div>
+          <div class="bar"><i id="mem-bar"></i></div>
+        </div>
+        <dl class="rows">
+          <div><dt data-i18n="sys.processor">Processor</dt><dd id="cpu-name">—</dd></div>
+          <div><dt data-i18n="sys.threads">Threads</dt><dd id="cores">—</dd></div>
+          <div><dt data-i18n="sys.processes">Processes</dt><dd id="processes">—</dd></div>
+          <div><dt data-i18n="sys.uptime">Uptime</dt><dd id="uptime">—</dd></div>
+          <div><dt data-i18n="sys.power">Power</dt><dd id="power">—</dd></div>
+        </dl>
+        <h3 data-i18n="sys.aiCore">AI core</h3>
+        <dl class="rows">
+          <div><dt data-i18n="sys.engine">Engine</dt><dd id="engine">—</dd></div>
+          <div><dt data-i18n="sys.firstToken">First token</dt><dd id="latency">—</dd></div>
+          <div><dt data-i18n="sys.throughput">Throughput</dt><dd id="throughput">—</dd></div>
+        </dl>
+      </aside>
 
-      <div class="gauge">
-        <div class="gauge-head"><span>MEMORY</span><b id="mem-value">--</b></div>
-        <div class="bar"><i id="mem-bar"></i></div>
-      </div>
+      <aside class="drawer" id="drawer-activity" hidden aria-labelledby="drawer-activity-title">
+        <div class="drawer-head">
+          <h2 id="drawer-activity-title" data-i18n="rail.activity">Activity</h2>
+          <button class="icon-btn pin-btn" type="button" data-pin aria-pressed="false" data-i18n-title="drawer.pin" data-i18n-aria="drawer.pin" title="Pin open" aria-label="Pin open">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6l-1 6 4 4H6l4-4zM12 14v6" /></svg>
+          </button>
+          <button class="icon-btn" type="button" data-drawer-close data-i18n-title="drawer.close" data-i18n-aria="drawer.close" title="Close" aria-label="Close">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
+        </div>
+        <ol id="activity" class="activity" aria-live="polite"></ol>
+        <button id="undo" class="btn ghost" type="button" disabled data-i18n="activity.undo">↶ Undo</button>
+        <p class="hint undo-label" id="undo-label"></p>
+      </aside>
 
-      <dl class="rows">
-        <div><dt>Processor</dt><dd id="cpu-name">—</dd></div>
-        <div><dt>Threads</dt><dd id="cores">—</dd></div>
-        <div><dt>Processes</dt><dd id="processes">—</dd></div>
-        <div><dt>Uptime</dt><dd id="uptime">—</dd></div>
-        <div><dt>Power</dt><dd id="power">—</dd></div>
-      </dl>
+      <aside class="drawer" id="drawer-voice" hidden aria-labelledby="drawer-voice-title">
+        <div class="drawer-head">
+          <h2 id="drawer-voice-title" data-i18n="rail.voice">Voice</h2>
+          <button class="icon-btn pin-btn" type="button" data-pin aria-pressed="false" data-i18n-title="drawer.pin" data-i18n-aria="drawer.pin" title="Pin open" aria-label="Pin open">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6l-1 6 4 4H6l4-4zM12 14v6" /></svg>
+          </button>
+          <button class="icon-btn" type="button" data-drawer-close data-i18n-title="drawer.close" data-i18n-aria="drawer.close" title="Close" aria-label="Close">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
+        </div>
+        <dl class="rows voice-rows">
+          <div><dt data-i18n="voice.hearing">Hearing</dt><dd id="voice-stt">—</dd></div>
+          <div><dt data-i18n="voice.speech">Speech</dt><dd id="voice-tts">—</dd></div>
+          <div><dt data-i18n="voice.wake">Wake word</dt><dd id="voice-wake">—</dd></div>
+        </dl>
+      </aside>
 
-      <h2><span>05</span> Activity</h2>
-      <ol id="activity" class="activity" aria-live="polite"></ol>
-      <button id="undo" class="btn ghost" type="button" disabled>↶ Undo</button>
-      <p class="hint undo-label" id="undo-label"></p>
-    </aside>
+      <aside class="drawer" id="drawer-security" hidden aria-labelledby="drawer-security-title">
+        <div class="drawer-head">
+          <h2 id="drawer-security-title" data-i18n="rail.security">Security</h2>
+          <button class="icon-btn pin-btn" type="button" data-pin aria-pressed="false" data-i18n-title="drawer.pin" data-i18n-aria="drawer.pin" title="Pin open" aria-label="Pin open">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6l-1 6 4 4H6l4-4zM12 14v6" /></svg>
+          </button>
+          <button class="icon-btn" type="button" data-drawer-close data-i18n-title="drawer.close" data-i18n-aria="drawer.close" title="Close" aria-label="Close">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
+        </div>
+        <dl class="rows secure">
+          <div><dt data-i18n="sec.network">Network</dt><dd data-i18n="sec.loopback">Loopback only</dd></div>
+          <div><dt data-i18n="sec.endpoint">Endpoint</dt><dd id="endpoint">—</dd></div>
+          <div><dt data-i18n="sec.session">Session</dt><dd id="session">—</dd></div>
+          <div><dt data-i18n="sec.keys">Keys</dt><dd data-i18n="sec.vault">OS credential vault</dd></div>
+          <div><dt data-i18n="sec.tools">Tools</dt><dd id="tools-count">—</dd></div>
+          <div><dt data-i18n="sec.context">Context</dt><dd id="context-state">Clean</dd></div>
+        </dl>
+      </aside>
+    </div>
 
-    <aside class="panel panel-right" aria-label="AI core and security">
-      <h2><span>02</span> AI Core</h2>
-      <dl class="rows">
-        <div><dt>Engine</dt><dd id="engine">—</dd></div>
-        <div><dt>First token</dt><dd id="latency">—</dd></div>
-        <div><dt>Throughput</dt><dd id="throughput">—</dd></div>
-      </dl>
-
-      <h2><span>03</span> Voice</h2>
-      <dl class="rows voice-rows">
-        <div><dt>Hearing</dt><dd id="voice-stt">—</dd></div>
-        <div><dt>Speech</dt><dd id="voice-tts">—</dd></div>
-        <div><dt>Wake word</dt><dd id="voice-wake">—</dd></div>
-      </dl>
-
-      <h2><span>04</span> Security</h2>
-      <dl class="rows secure">
-        <div><dt>Network</dt><dd>Loopback only</dd></div>
-        <div><dt>Endpoint</dt><dd id="endpoint">—</dd></div>
-        <div><dt>Session</dt><dd id="session">—</dd></div>
-        <div><dt>Keys</dt><dd>OS credential vault</dd></div>
-        <div><dt>Tools</dt><dd id="tools-count">—</dd></div>
-        <div><dt>Context</dt><dd id="context-state">Clean</dd></div>
-      </dl>
-
-      <div class="panel-buttons">
-        <button id="open-memory" class="btn ghost" type="button">◈ Memory</button>
-        <button id="open-settings" class="btn ghost" type="button">⚙ Configure</button>
-      </div>
-    </aside>
-
-    <section class="console" aria-label="Conversation">
-      <div id="transcript" class="transcript" aria-live="polite"></div>
-      <form id="composer" class="composer" autocomplete="off">
-        <span class="caret-mark" aria-hidden="true">›</span>
-        <textarea id="input" rows="1" dir="auto" maxlength="8000"
-                  placeholder="Awaiting your instructions, sir…"></textarea>
-        <button class="btn ghost mic-btn" type="button" id="mic" title="Talk (or hold Ctrl+Space)" aria-label="Talk">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
-        </button>
-        <button class="btn" type="submit" id="send">Send</button>
-        <button class="btn ghost" type="button" id="reset" title="Forget this conversation">Clear</button>
-      </form>
-    </section>
-  </main>
+    <main class="stage">
+      <div class="emblem-wrap"><div id="emblem"></div></div>
+      <section class="console" aria-label="Conversation">
+        <div id="transcript" class="transcript" aria-live="polite"></div>
+        <form id="composer" class="composer" autocomplete="off">
+          <span class="caret-mark" aria-hidden="true">›</span>
+          <textarea id="input" rows="1" dir="auto" maxlength="8000"
+                    data-i18n-placeholder="composer.placeholder" placeholder="Ask Haris anything…"></textarea>
+          <button class="btn ghost mic-btn" type="button" id="mic"
+                  data-i18n-title="composer.talk" data-i18n-aria="composer.talk" title="Talk (or hold Ctrl+Space)" aria-label="Talk (or hold Ctrl+Space)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg>
+          </button>
+          <button class="btn" type="submit" id="send" data-i18n="composer.send">Send</button>
+          <button class="btn ghost" type="button" id="reset" data-i18n="composer.clear"
+                  data-i18n-title="composer.clearTitle" title="Forget this conversation">Clear</button>
+        </form>
+      </section>
+    </main>
+  </div>
 
   <div id="boot" class="boot" aria-hidden="true"><pre id="boot-log"></pre></div>
   <div id="flash" class="flash" aria-hidden="true"></div>
@@ -125,54 +184,60 @@
   <dialog id="settings" class="settings">
     <form id="settings-form">
       <header>
-        <h2>Configuration</h2>
-        <button type="button" class="btn ghost" id="close-settings" aria-label="Close">✕</button>
+        <h2 data-i18n="settings.title">Settings</h2>
+        <button type="button" class="btn ghost" id="close-settings" data-i18n-aria="settings.close" aria-label="Close">✕</button>
       </header>
 
       <fieldset>
-        <legend>Identity</legend>
-        <label>Assistant name <input name="assistantName" maxlength="40" required /></label>
-        <label>Your name <input name="userName" maxlength="40" /></label>
-        <label>Home city (for weather) <input name="homeCity" maxlength="60" placeholder="e.g. Cairo" /></label>
-        <label class="check"><input type="checkbox" name="morningBriefing" /> Daily briefing on the first launch of the day</label>
-        <label class="check"><input type="checkbox" name="startWithWindows" /> Start Haris when I sign in to Windows</label>
+        <legend data-i18n="settings.identity">Identity</legend>
+        <label><span data-i18n="settings.assistantName">Assistant name</span> <input name="assistantName" maxlength="40" required /></label>
+        <label><span data-i18n="settings.userName">Your name</span> <input name="userName" maxlength="40" /></label>
+        <label><span data-i18n="settings.homeCity">Home city (for weather)</span> <input name="homeCity" maxlength="60" data-i18n-placeholder="settings.homeCityPh" placeholder="e.g. Cairo" /></label>
+        <label><span data-i18n="settings.uiLanguage">Interface language</span>
+          <select name="uiLanguage">
+            <option value="en">English</option>
+            <option value="ar">العربية</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" name="morningBriefing" /> <span data-i18n="settings.briefing">Daily briefing on the first launch of the day</span></label>
+        <label class="check"><input type="checkbox" name="startWithWindows" /> <span data-i18n="settings.autostart">Start Haris when I sign in to Windows</span></label>
         <p class="hint" id="autostart-hint"></p>
       </fieldset>
 
       <fieldset>
-        <legend>Access</legend>
-        <label>Allowed folders — one per line
-          <textarea name="allowedFolders" rows="4" spellcheck="false"></textarea>
+        <legend data-i18n="settings.access">Access</legend>
+        <label><span data-i18n="settings.folders">Allowed folders — one per line</span>
+          <textarea name="allowedFolders" rows="4" spellcheck="false" dir="ltr"></textarea>
         </label>
-        <p class="hint">File tools can only see these folders. System folders, AppData and your whole home folder are refused.</p>
+        <p class="hint" data-i18n="settings.foldersHint">File tools can only see these folders. System folders, AppData and your whole home folder are refused.</p>
       </fieldset>
 
       <fieldset>
-        <legend>Voice</legend>
-        <label class="check"><input type="checkbox" name="voiceReplies" /> Speak replies aloud</label>
-        <label class="check"><input type="checkbox" name="voiceWake" /> Listen for “Hey Haris” (microphone stays open; audio goes only to the local wake-word engine)</label>
-        <label class="check"><input type="checkbox" name="voiceFollowUp" /> Conversation mode: after a spoken answer, listen 5 s for a follow-up (no wake word)</label>
-        <label>I speak
+        <legend data-i18n="settings.voice">Voice</legend>
+        <label class="check"><input type="checkbox" name="voiceReplies" /> <span data-i18n="settings.voiceReplies">Speak replies aloud</span></label>
+        <label class="check"><input type="checkbox" name="voiceWake" /> <span data-i18n="settings.voiceWake">Listen for “Hey Haris” (microphone stays open; audio goes only to the local wake-word engine)</span></label>
+        <label class="check"><input type="checkbox" name="voiceFollowUp" /> <span data-i18n="settings.followUp">Conversation mode: after a spoken answer, listen 5 s for a follow-up (no wake word)</span></label>
+        <label><span data-i18n="settings.sttLanguage">I speak</span>
           <select name="sttLanguage">
-            <option value="auto">Detect automatically</option>
-            <option value="ar">Arabic (best for Egyptian Arabic)</option>
-            <option value="en">English</option>
+            <option value="auto" data-i18n="settings.stt.auto">Detect automatically</option>
+            <option value="ar" data-i18n="settings.stt.ar">Arabic (best for Egyptian Arabic)</option>
+            <option value="en" data-i18n="settings.stt.en">English</option>
           </select>
         </label>
-        <label>Haris replies in
+        <label><span data-i18n="settings.replyLanguage">Haris replies in</span>
           <select name="replyLanguage">
-            <option value="auto">The language I use</option>
-            <option value="ar">Egyptian Arabic, always</option>
-            <option value="en">English, always</option>
+            <option value="auto" data-i18n="settings.reply.auto">The language I use</option>
+            <option value="ar" data-i18n="settings.reply.ar">Egyptian Arabic, always</option>
+            <option value="en" data-i18n="settings.reply.en">English, always</option>
           </select>
         </label>
-        <label>Voice engine
+        <label><span data-i18n="settings.ttsEngine">Voice engine</span>
           <select name="ttsEngine">
-            <option value="piper">Piper — on this PC (private)</option>
-            <option value="gemini">Gemini — natural, Egyptian Arabic (reply text goes to Google)</option>
+            <option value="piper" data-i18n="settings.tts.piper">Piper — on this PC (private)</option>
+            <option value="gemini" data-i18n="settings.tts.gemini">Gemini — natural, Egyptian Arabic (reply text goes to Google)</option>
           </select>
         </label>
-        <label>Gemini voice
+        <label><span data-i18n="settings.geminiVoice">Gemini voice</span>
           <select name="geminiVoice">
             <option value="Charon">Charon</option>
             <option value="Orus">Orus</option>
@@ -206,79 +271,77 @@
             <option value="Sulafat">Sulafat</option>
           </select>
         </label>
-        <label>Google AI Studio key <input name="geminiKey" type="password" autocomplete="off" placeholder="leave empty to keep" /></label>
+        <label><span data-i18n="settings.geminiKey">Google AI Studio key</span> <input name="geminiKey" type="password" autocomplete="off" dir="ltr" data-i18n-placeholder="settings.keepPh" placeholder="leave empty to keep" /></label>
         <p class="hint" id="gemini-key-state"></p>
-        <label>Piper English voice <input name="voiceEnglish" placeholder="en_GB-alan-medium" /></label>
-        <label>Piper Arabic voice <input name="voiceArabic" placeholder="ar_JO-kareem-medium" /></label>
-        <button type="button" class="btn ghost" id="test-speaker">▶ Test speaker</button>
-        <p class="hint">Push-to-talk: hold Ctrl+Space, or click the microphone. Approvals can never be given by voice.</p>
+        <label><span data-i18n="settings.piperEnglish">Piper English voice</span> <input name="voiceEnglish" dir="ltr" placeholder="en_GB-alan-medium" /></label>
+        <label><span data-i18n="settings.piperArabic">Piper Arabic voice</span> <input name="voiceArabic" dir="ltr" placeholder="ar_JO-kareem-medium" /></label>
+        <button type="button" class="btn ghost" id="test-speaker" data-i18n="settings.testSpeaker">▶ Test speaker</button>
+        <p class="hint" data-i18n="settings.voiceHint">Push-to-talk: hold Ctrl+Space, or click the microphone. Approvals can never be given by voice.</p>
       </fieldset>
 
       <fieldset>
-        <legend>Engine</legend>
-        <label>Provider
+        <legend data-i18n="settings.engine">Engine</legend>
+        <label><span data-i18n="settings.provider">Provider</span>
           <select name="provider">
-            <option value="OLLAMA">Ollama (local)</option>
-            <option value="LM_STUDIO">LM Studio (local)</option>
-            <option value="COLAB">Ollama on Google Colab (free GPU)</option>
-            <option value="ANTHROPIC">Claude (Anthropic API)</option>
-            <option value="OPENAI_COMPATIBLE">OpenAI-compatible cloud</option>
+            <option value="OLLAMA" data-i18n="settings.provider.OLLAMA">Ollama (local)</option>
+            <option value="LM_STUDIO" data-i18n="settings.provider.LM_STUDIO">LM Studio (local)</option>
+            <option value="COLAB" data-i18n="settings.provider.COLAB">Ollama on Google Colab (free GPU)</option>
+            <option value="ANTHROPIC" data-i18n="settings.provider.ANTHROPIC">Claude (Anthropic API)</option>
+            <option value="OPENAI_COMPATIBLE" data-i18n="settings.provider.OPENAI_COMPATIBLE">OpenAI-compatible cloud</option>
           </select>
         </label>
 
         <div class="provider-fields" data-provider="OLLAMA">
-          <label>Ollama URL <input name="ollamaBaseUrl" required /></label>
-          <label>Model <input name="ollamaModel" list="model-list" placeholder="e.g. qwen2.5:3b" /></label>
+          <label><span data-i18n="settings.ollamaUrl">Ollama URL</span> <input name="ollamaBaseUrl" dir="ltr" required /></label>
+          <label><span data-i18n="settings.model">Model</span> <input name="ollamaModel" dir="ltr" list="model-list" placeholder="e.g. qwen2.5:3b" /></label>
         </div>
 
         <div class="provider-fields" data-provider="LM_STUDIO">
-          <label>LM Studio URL <input name="lmStudioBaseUrl" required /></label>
-          <label>Model <input name="lmStudioModel" list="model-list" /></label>
+          <label><span data-i18n="settings.lmStudioUrl">LM Studio URL</span> <input name="lmStudioBaseUrl" dir="ltr" required /></label>
+          <label><span data-i18n="settings.model">Model</span> <input name="lmStudioModel" dir="ltr" list="model-list" /></label>
         </div>
 
         <div class="provider-fields" data-provider="COLAB">
-          <p class="hint">Protected way: run <b>haris_colab.ipynb</b> in Colab (GPU runtime) and paste the address
-            and access token it prints. You can also paste a Colab port address (https://11434-….colab.dev/…) as-is.
-            Your conversations are processed on Google's servers.</p>
-          <label>Colab address <input name="colabBaseUrl" placeholder="https://….ngrok-free.dev  or  https://….trycloudflare.com" /></label>
-          <label>Model <input name="colabModel" list="model-list" placeholder="e.g. qwen2.5:7b" /></label>
-          <label>Access token <input name="colabKey" type="password" autocomplete="off" placeholder="leave empty to keep" /></label>
+          <p class="hint" data-i18n="settings.colabHint">Protected way: run haris_colab.ipynb in Colab (GPU runtime) and paste the address and access token it prints. You can also paste a Colab port address (https://11434-….colab.dev/…) as-is. Your conversations are processed on Google's servers.</p>
+          <label><span data-i18n="settings.colabUrl">Colab address</span> <input name="colabBaseUrl" dir="ltr" placeholder="https://….ngrok-free.dev  or  https://….trycloudflare.com" /></label>
+          <label><span data-i18n="settings.model">Model</span> <input name="colabModel" dir="ltr" list="model-list" placeholder="e.g. qwen2.5:7b" /></label>
+          <label><span data-i18n="settings.colabToken">Access token</span> <input name="colabKey" type="password" autocomplete="off" dir="ltr" data-i18n-placeholder="settings.keepPh" placeholder="leave empty to keep" /></label>
           <p class="hint" id="colab-key-state"></p>
-          <label class="check"><input type="checkbox" name="colabStt" /> Also recognise speech on Colab's GPU (faster; needs the notebook's access token — falls back to this PC)</label>
+          <label class="check"><input type="checkbox" name="colabStt" /> <span data-i18n="settings.colabStt">Also recognise speech on Colab's GPU (faster; needs the notebook's access token — falls back to this PC)</span></label>
         </div>
 
         <div class="provider-fields" data-provider="ANTHROPIC">
-          <label>Model <input name="anthropicModel" list="model-list" required /></label>
-          <label>Effort
+          <label><span data-i18n="settings.model">Model</span> <input name="anthropicModel" dir="ltr" list="model-list" required /></label>
+          <label><span data-i18n="settings.effort">Effort</span>
             <select name="anthropicEffort">
-              <option value="low">Low — fastest</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="xhigh">Extra high</option>
-              <option value="max">Max</option>
+              <option value="low" data-i18n="settings.effort.low">Low — fastest</option>
+              <option value="medium" data-i18n="settings.effort.medium">Medium</option>
+              <option value="high" data-i18n="settings.effort.high">High</option>
+              <option value="xhigh" data-i18n="settings.effort.xhigh">Extra high</option>
+              <option value="max" data-i18n="settings.effort.max">Max</option>
             </select>
           </label>
-          <label>API key <input name="anthropicKey" type="password" autocomplete="off" placeholder="sk-ant-…  (leave empty to keep)" /></label>
+          <label><span data-i18n="settings.apiKey">API key</span> <input name="anthropicKey" type="password" autocomplete="off" dir="ltr" data-i18n-placeholder="settings.anthropicKeyPh" placeholder="sk-ant-…  (leave empty to keep)" /></label>
           <p class="hint" id="anthropic-key-state"></p>
-          <label class="check"><input type="checkbox" name="webSearch" /> Allow Claude to search the web (results are treated as untrusted)</label>
+          <label class="check"><input type="checkbox" name="webSearch" /> <span data-i18n="settings.webSearch">Allow Claude to search the web (results are treated as untrusted)</span></label>
         </div>
 
         <div class="provider-fields" data-provider="OPENAI_COMPATIBLE">
-          <label>Base URL <input name="openAiBaseUrl" placeholder="https://api.openai.com" /></label>
-          <label>Model <input name="openAiModel" list="model-list" /></label>
-          <label>API key <input name="openAiKey" type="password" autocomplete="off" placeholder="leave empty to keep" /></label>
+          <label><span data-i18n="settings.baseUrl">Base URL</span> <input name="openAiBaseUrl" dir="ltr" placeholder="https://api.openai.com" /></label>
+          <label><span data-i18n="settings.model">Model</span> <input name="openAiModel" dir="ltr" list="model-list" /></label>
+          <label><span data-i18n="settings.apiKey">API key</span> <input name="openAiKey" type="password" autocomplete="off" dir="ltr" data-i18n-placeholder="settings.keepPh" placeholder="leave empty to keep" /></label>
           <p class="hint" id="openai-key-state"></p>
         </div>
 
         <datalist id="model-list"></datalist>
-        <button type="button" class="btn ghost" id="refresh-models">Save &amp; detect models</button>
+        <button type="button" class="btn ghost" id="refresh-models" data-i18n="settings.detect">Save &amp; detect models</button>
       </fieldset>
 
-      <p class="hint">Keys are written to Windows Credential Manager and can never be read back by this window.</p>
+      <p class="hint" data-i18n="settings.keysHint">Keys are written to Windows Credential Manager and can never be read back by this window.</p>
       <p class="form-error" id="settings-error" role="alert"></p>
 
       <footer>
-        <button type="submit" class="btn">Save</button>
+        <button type="submit" class="btn" data-i18n="settings.save">Save</button>
       </footer>
     </form>
   </dialog>
@@ -286,15 +349,14 @@
   <dialog id="memory" class="settings memory-dialog" aria-labelledby="memory-title">
     <div class="memory-inner">
       <header>
-        <h2 id="memory-title">Memory</h2>
-        <button type="button" class="btn ghost" id="close-memory" aria-label="Close">✕</button>
+        <h2 id="memory-title" data-i18n="memory.title">Memory</h2>
+        <button type="button" class="btn ghost" id="close-memory" data-i18n-aria="settings.close" aria-label="Close">✕</button>
       </header>
-      <p class="hint">Everything Haris remembers about you, encrypted on this computer (AES-256, key in Windows
-        Credential Manager). Each fact was approved by you. Delete anything at any time.</p>
+      <p class="hint" data-i18n="memory.hint">Everything Haris remembers about you, encrypted on this computer (AES-256, key in Windows Credential Manager). Each fact was approved by you. Delete anything at any time.</p>
       <ul id="memory-list" class="memory-list"></ul>
       <p class="form-error" id="memory-error" role="alert"></p>
       <footer>
-        <button type="button" class="btn ghost danger" id="memory-wipe">Forget everything</button>
+        <button type="button" class="btn ghost danger" id="memory-wipe" data-i18n="memory.wipe">Forget everything</button>
       </footer>
     </div>
   </dialog>
@@ -303,27 +365,24 @@
     <div class="confirm-inner">
       <header>
         <span class="risk-badge" id="confirm-risk">CONFIRM</span>
-        <h2 id="confirm-title">Authorisation required</h2>
+        <h2 id="confirm-title" data-i18n="confirm.title">Authorisation required</h2>
       </header>
       <p class="confirm-tool" id="confirm-tool"></p>
       <p class="confirm-summary" id="confirm-summary" dir="auto"></p>
       <figure class="confirm-preview" id="confirm-preview-box" hidden>
-        <img id="confirm-preview" alt="Exactly what would be shared" />
-        <figcaption>This exact picture is what would be shared. Check it for anything private.</figcaption>
+        <img id="confirm-preview" data-i18n-aria="confirm.previewAlt" alt="" />
+        <figcaption data-i18n="confirm.previewCaption">This exact picture is what would be shared. Check it for anything private.</figcaption>
       </figure>
       <p class="confirm-destination" id="confirm-destination"></p>
-      <p class="confirm-warning" id="confirm-warning" hidden>
-        ⚠ Outside content (a file, the clipboard or a web page) is in this conversation and may contain
-        planted instructions. Approve only if this is something <b>you</b> asked for.
-      </p>
+      <p class="confirm-warning" id="confirm-warning" hidden data-i18n="confirm.warning">⚠ Outside content (a file, the clipboard or a web page) is in this conversation and may contain planted instructions. Approve only if this is something you asked for.</p>
       <details>
-        <summary>Exact arguments</summary>
+        <summary data-i18n="confirm.args">Exact arguments</summary>
         <pre id="confirm-args" dir="ltr"></pre>
       </details>
       <footer>
-        <button class="btn ghost danger" type="button" id="confirm-deny">Deny</button>
-        <button class="btn ghost" type="button" id="confirm-session">Allow for session</button>
-        <button class="btn" type="button" id="confirm-once">Allow once</button>
+        <button class="btn ghost danger" type="button" id="confirm-deny" data-i18n="confirm.deny">Deny</button>
+        <button class="btn ghost" type="button" id="confirm-session" data-i18n="confirm.session">Allow for session</button>
+        <button class="btn" type="button" id="confirm-once" data-i18n="confirm.once">Allow once</button>
       </footer>
       <div class="confirm-timer"><i id="confirm-timer-bar"></i></div>
     </div>
