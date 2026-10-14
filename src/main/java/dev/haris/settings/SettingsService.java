@@ -84,6 +84,7 @@ public class SettingsService {
             throw new IllegalArgumentException("Languages must be auto, ar or en.");
         }
         validateVoices(s);
+        validateInterface(s);
         return s.withFolders(validateFolders(s.allowedFolders())).withColabBaseUrl(colabOrigin(s.colabBaseUrl()));
     }
 
@@ -97,6 +98,13 @@ public class SettingsService {
         }
         if (!GeminiSpeech.VOICES.contains(s.geminiVoice())) {
             throw new IllegalArgumentException("Unknown Gemini voice: " + s.geminiVoice());
+        }
+    }
+
+    /** The HUD's language must be one it has strings for. */
+    static void validateInterface(Settings s) {
+        if (!"en".equals(s.uiLanguage()) && !"ar".equals(s.uiLanguage())) {
+            throw new IllegalArgumentException("Interface language must be en or ar.");
         }
     }
 
