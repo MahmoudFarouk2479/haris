@@ -164,7 +164,7 @@ html[lang='ar'] #clock-date { letter-spacing: 0; font-size: 0.72rem; }
   color: var(--ink-dim);
   cursor: pointer;
 }
-.rail-btn svg, .icon-btn svg, .mic-btn svg { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.rail-btn svg, .icon-btn svg, .mic-btn svg, .chat-tab svg { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .rail-btn:hover, .rail-btn:focus-visible { color: var(--line); background: var(--line-faint); }
 .rail-btn:focus-visible, .icon-btn:focus-visible { outline: 2px solid var(--line); outline-offset: 2px; }
 .rail-btn.on { color: var(--line); background: rgba(var(--line-rgb), 0.15); box-shadow: inset 2px 0 0 var(--line); }
@@ -273,7 +273,7 @@ html[lang='ar'] .rows dt { letter-spacing: 0; text-transform: none; font-size: 0
 .undo-label { margin-top: 0.3rem; font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── Stage: emblem + conversation ───────────────────────────────────────── */
-.stage { grid-area: stage; min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 0.8rem clamp(0.8rem, 2vw, 2rem) 1rem; }
+.stage { grid-area: stage; position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 0.8rem clamp(0.8rem, 2vw, 2rem) 1rem; }
 .emblem-wrap { flex: 1 1 auto; min-height: 0; display: grid; place-items: center; overflow: hidden; container-type: size; }
 #emblem { width: clamp(9rem, 38vmin, 34rem); max-width: min(100cqw, 100cqh); aspect-ratio: 1; }
 .emblem { width: 100%; height: 100%; overflow: visible; }
@@ -388,6 +388,62 @@ html[lang='ar'] .msg header { letter-spacing: 0; font-size: 0.75rem; }
   unicode-bidi: plaintext;
 }
 #input::placeholder { color: var(--ink-dim); }
+
+/* Conversation column header and the tab that re-opens it (both only on wide windows; see below). */
+.chat-head { display: none; align-items: center; gap: 0.4rem; }
+.chat-head h2 {
+  margin: 0;
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+html[lang='ar'] .chat-head h2 { letter-spacing: 0; font-size: 0.95rem; }
+.chat-hide[hidden], .chat-tab[hidden] { display: none; }
+.chat-tab {
+  display: none;
+  position: absolute;
+  inset-inline-end: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.75rem 0.4rem;
+  border: 1px solid var(--line-dim);
+  border-inline-end: 0;
+  border-start-start-radius: 0.6rem;
+  border-end-start-radius: 0.6rem;
+  background: rgba(8, 22, 20, 0.92);
+  color: var(--line);
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+html[lang='ar'] .chat-tab { font-family: var(--font-body); font-size: 0.8rem; letter-spacing: 0; text-transform: none; }
+.chat-tab span { writing-mode: vertical-rl; }
+.chat-tab:hover, .chat-tab:focus-visible { background: rgba(var(--line-rgb), 0.15); border-color: var(--line); }
+.chat-tab:focus-visible { outline: 2px solid var(--line); outline-offset: 2px; }
+.chat-tab.news::after {
+  content: '';
+  position: absolute;
+  top: -0.2rem;
+  inset-inline-start: -0.2rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0.4rem var(--gold);
+}
+/* The chevrons point at the inline-end edge (hide) and away from it (show): mirrored in Arabic. */
+html[dir='rtl'] .chat-hide svg, html[dir='rtl'] .chat-tab svg { transform: scaleX(-1); }
 
 /* ── Buttons ────────────────────────────────────────────────────────────── */
 .btn {
@@ -513,6 +569,51 @@ html[lang='ar'] .confirm h2 { letter-spacing: 0; font-size: 1.05rem; }
 .confirm-timer i { display: block; height: 100%; width: 100%; background: rgb(var(--c)); }
 
 /* ── Window sizes ───────────────────────────────────────────────────────── */
+/* >= 1200 px: the conversation is a full-height column at the inline-end side (chatPanel.js sets
+   body.chat-side, and body.chat-hidden when the user hid it). Narrower windows keep the stacked layout. */
+@media (min-width: 1200px) {
+  :root { --chat-w: clamp(22rem, 30vw, 36rem); }
+  body.chat-side #emblem { width: clamp(9rem, 60vmin, 44rem); }
+
+  body.chat-side:not(.chat-hidden) .stage {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--chat-w);
+    grid-template-rows: minmax(0, 1fr);
+    padding: 0;
+  }
+  body.chat-side:not(.chat-hidden) .emblem-wrap { padding: 0.8rem clamp(0.8rem, 2vw, 2rem) 1rem; }
+  body.chat-side:not(.chat-hidden) .console {
+    container: chat / inline-size;
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0.8rem 0.9rem 1rem;
+    border-inline-start: 1px solid var(--line-dim);
+    background: rgba(8, 22, 20, 0.86);
+    animation: chat-in 0.22s ease-out;
+  }
+  html[dir='rtl'] body.chat-side:not(.chat-hidden) .console { --chat-in-from: -1rem; }
+  body.chat-side:not(.chat-hidden) .chat-head { display: flex; }
+  body.chat-side:not(.chat-hidden) .transcript { flex: 1 1 auto; min-height: 0; max-height: none; }
+
+  /* Hidden ("voice mode"): the emblem takes the stage; the composer stays as a floating bar. */
+  body.chat-hidden .transcript, body.chat-hidden .chat-head { display: none; }
+  body.chat-hidden .console { width: min(44rem, 90%); }
+  body.chat-hidden #emblem { width: clamp(9rem, 66vmin, 48rem); }
+  body.chat-hidden .chat-tab:not([hidden]) { display: flex; }
+}
+/* A narrow column: the text box gets its own row, the buttons go underneath at the end. */
+@container chat (max-width: 30rem) {
+  .composer { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; }
+  .caret-mark { grid-area: 1 / 1; }
+  #input { grid-area: 1 / 2 / 2 / -1; }
+  #mic { grid-area: 2 / 3; }
+  #send { grid-area: 2 / 4; }
+  #reset { grid-area: 2 / 5; }
+}
+/* Slides in from the inline-end edge; the direction is a variable so a language switch does not replay it. */
+@keyframes chat-in { from { opacity: 0; transform: translateX(var(--chat-in-from, 1rem)); } }
+
 @media (max-width: 899px) {
   :root { --drawer-w: min(20rem, calc(100vw - var(--rail-w) - 1rem)); }
   .tagline, #clock-date, #mic-label { display: none; }

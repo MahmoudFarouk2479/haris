@@ -9,6 +9,7 @@ import './styles.css';
 import { api, hasToken, streamChat, subscribeEvents } from './api.js';
 import { createEmblem } from './emblem.js';
 import { mountDrawers } from './drawers.js';
+import { mountChatPanel } from './chatPanel.js';
 import { applyLanguage, brandFor, locale, speakerFor, t } from './i18n.js';
 import { sameRules } from './settingsDiff.js';
 import { SentenceSplitter, Voice } from './voice.js';
@@ -348,6 +349,7 @@ function addMessage(role, text = '') {
   el.append(who, body);
   transcript.append(el);
   scrollDown();
+  if (role !== 'user') chat.markNew();
   return body;
 }
 
@@ -370,6 +372,10 @@ function showTool({ id, tool, summary, status, detail }) {
 function scrollDown() {
   transcript.scrollTop = transcript.scrollHeight;
 }
+
+// Wide windows: the conversation is a side column that can be hidden. It lands at the bottom
+// whenever it reappears or the layout switches.
+const chat = mountChatPanel({ onReveal: scrollDown });
 
 /** Every picture shared with the model appears in the transcript, so there are no hidden looks. */
 function showPicture(src) {

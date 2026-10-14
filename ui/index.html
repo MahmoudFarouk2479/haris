@@ -160,7 +160,19 @@
 
     <main class="stage">
       <div class="emblem-wrap"><div id="emblem"></div></div>
-      <section class="console" data-i18n-aria="console.label" aria-label="Conversation">
+      <button class="chat-tab" type="button" id="chat-show" hidden aria-controls="chat" aria-expanded="false"
+              data-i18n-title="chat.show" data-i18n-aria="chat.show" title="Show chat" aria-label="Show chat">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+        <span data-i18n="chat.tab">Chat</span>
+      </button>
+      <section class="console" id="chat" data-i18n-aria="console.label" aria-label="Conversation">
+        <div class="chat-head">
+          <h2 data-i18n="chat.title">Conversation</h2>
+          <button class="icon-btn chat-hide" type="button" id="chat-hide" hidden aria-controls="chat" aria-expanded="true"
+                  data-i18n-title="chat.hide" data-i18n-aria="chat.hide" title="Hide conversation" aria-label="Hide conversation">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+          </button>
+        </div>
         <div id="transcript" class="transcript" aria-live="polite"></div>
         <form id="composer" class="composer" autocomplete="off">
           <span class="caret-mark" aria-hidden="true">›</span>
