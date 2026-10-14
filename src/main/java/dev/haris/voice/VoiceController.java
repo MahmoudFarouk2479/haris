@@ -41,14 +41,16 @@ public class VoiceController {
     private final VoiceEngines engines;
     private final ColabSpeech colab;
     private final WakeWordDetector wakeWord;
+    private final GeminiSpeech gemini;
     private final SettingsService settings;
     private final EnginesService startup;
     private volatile Map<String, Object> cachedStatus;
     private volatile long statusAt;
 
-    public VoiceController(VoiceEngines engines, ColabSpeech colab, WakeWordDetector wakeWord,
+    public VoiceController(VoiceEngines engines, ColabSpeech colab, WakeWordDetector wakeWord, GeminiSpeech gemini,
                            SettingsService settings, EnginesService startup) {
         this.wakeWord = wakeWord;
+        this.gemini = gemini;
         this.startup = startup;
         this.engines = engines;
         this.colab = colab;
@@ -63,6 +65,7 @@ public class VoiceController {
             status.put("wake", wake);
             status.put("wakeWords", wake ? List.of(WakeWordSocket.WAKE_WORD) : List.of());
             status.put("sttRoute", colab.target().isPresent() ? "colab" : "local");
+            status.put("ttsRoute", gemini.selected() ? "gemini" : "local");
             cachedStatus = status;
             statusAt = System.currentTimeMillis();
         }
@@ -108,6 +111,15 @@ public class VoiceController {
         // Nothing pronounceable (only emoji or symbols) makes Piper fail; skip it quietly.
         if (text.isEmpty() || text.length() > MAX_SPEAK_CHARS || !SPEAKABLE.matcher(text).find()) {
             return ResponseEntity.badRequest().build();
+        }
+        Optional<String> geminiKey = gemini.available();
+        if (geminiKey.isPresent()) {
+            try {
+                return ResponseEntity.ok().contentType(MediaType.parseMediaType("audio/wav"))
+                        .body(gemini.speak(geminiKey.get(), text));
+            } catch (IOException e) {
+                log.warn("Gemini speech failed, using the local voice: {}", e.getMessage());
+            }
         }
         Settings s = settings.get();
         String voice = ARABIC.matcher(text).find() ? s.voiceArabic() : s.voiceEnglish();

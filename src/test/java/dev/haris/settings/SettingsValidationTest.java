@@ -15,7 +15,7 @@ class SettingsValidationTest {
     private static Settings with(String ollama, String cloud) {
         return new Settings("Haris", "", ProviderKind.OLLAMA, "claude-opus-5-5", "medium", false,
                 ollama, "", "http://127.0.0.1:1234", "", cloud, "", List.of(), "",
-                true, false, "auto", "en_GB-alan-medium", "ar_JO-kareem-medium", true, false, "", "", "auto", true, true);
+                true, false, "auto", "en_GB-alan-medium", "ar_JO-kareem-medium", true, false, "", "", "auto", true, true, "piper", "Charon");
     }
 
     @Test
@@ -51,7 +51,7 @@ class SettingsValidationTest {
     private static Settings withColab(String url) {
         return new Settings("Haris", "", ProviderKind.COLAB, "claude-opus-5-5", "medium", false,
                 "http://127.0.0.1:11434", "", "http://127.0.0.1:1234", "", "", "", List.of(), "",
-                true, false, "auto", "en_GB-alan-medium", "ar_JO-kareem-medium", true, false, url, "qwen2.5:7b", "auto", true, true);
+                true, false, "auto", "en_GB-alan-medium", "ar_JO-kareem-medium", true, false, url, "qwen2.5:7b", "auto", true, true, "piper", "Charon");
     }
 
     @Test
@@ -89,5 +89,26 @@ class SettingsValidationTest {
         }
         assertThatThrownBy(() -> SettingsService.validateFolders(List.of(tmp.resolve("missing").toString())))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void spokenRepliesUseAKnownEngineAndGeminiVoice() {
+        Settings ok = Settings.defaults();
+        assertThat(ok.ttsEngine()).isEqualTo("piper");
+        SettingsService.validateVoices(ok);
+        SettingsService.validateVoices(withSpeech("gemini", "Kore"));
+        assertThatThrownBy(() -> SettingsService.validateVoices(withSpeech("elevenlabs", "Kore")))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> SettingsService.validateVoices(withSpeech("gemini", "Darth")))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private static Settings withSpeech(String engine, String voice) {
+        Settings d = Settings.defaults();
+        return new Settings(d.assistantName(), d.userName(), d.provider(), d.anthropicModel(), d.anthropicEffort(),
+                d.webSearch(), d.ollamaBaseUrl(), d.ollamaModel(), d.lmStudioBaseUrl(), d.lmStudioModel(),
+                d.openAiBaseUrl(), d.openAiModel(), d.allowedFolders(), d.homeCity(), d.voiceReplies(), d.voiceWake(),
+                d.sttLanguage(), d.voiceEnglish(), d.voiceArabic(), d.morningBriefing(), d.startWithWindows(),
+                d.colabBaseUrl(), d.colabModel(), d.replyLanguage(), d.voiceFollowUp(), d.colabStt(), engine, voice);
     }
 }

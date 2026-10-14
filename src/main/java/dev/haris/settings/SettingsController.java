@@ -71,7 +71,8 @@ public class SettingsController {
         return new SettingsView(settings.get(), Map.of(
                 SecretStore.ANTHROPIC, secrets.has(SecretStore.ANTHROPIC),
                 SecretStore.OPENAI_COMPATIBLE, secrets.has(SecretStore.OPENAI_COMPATIBLE),
-                SecretStore.COLAB, secrets.has(SecretStore.COLAB)), providers.ready());
+                SecretStore.COLAB, secrets.has(SecretStore.COLAB),
+                SecretStore.GEMINI, secrets.has(SecretStore.GEMINI)), providers.ready());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

@@ -33,6 +33,7 @@ the first time they are used.
 | Piper voices (`en_GB-alan-medium`, `ar_JO-kareem-medium`, …) | voices | **per voice** — see each voice's `MODEL_CARD` before commercial use |
 | SearXNG (`searxng/searxng`) | private web search | AGPL-3.0 (run unmodified as a separate service) |
 | Ollama | local / Colab models | MIT |
+| Gemini API (optional voice) | natural spoken replies | Google APIs terms of service; your own key |
 | Model weights you choose (Qwen, Llama, Gemma, …) | the assistant's brain | each model's own license |
 | cloudflared | Colab tunnel (optional) | Apache-2.0 |
 | ngrok agent | Colab tunnel (optional) | proprietary, ngrok terms of service |

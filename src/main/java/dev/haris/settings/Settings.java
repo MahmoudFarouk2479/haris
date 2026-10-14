@@ -59,7 +59,11 @@ public record Settings(
         /** After a spoken reply, listen a few seconds for a follow-up without the wake word. */
         Boolean voiceFollowUp,
         /** With the Colab engine, also transcribe speech on Colab's GPU (falls back to the local engine). */
-        Boolean colabStt) {
+        Boolean colabStt,
+        /** piper: spoken replies made on this PC; gemini: Google's natural voices (reply text goes to Google). */
+        @Pattern(regexp = "piper|gemini") String ttsEngine,
+        /** One of Gemini's prebuilt voice names. */
+        @Size(max = 20) String geminiVoice) {
 
     /** Piper voice ids look like en_GB-alan-medium. */
     public static final String VOICE_NAME = "[a-z]{2,3}_[A-Z]{2}-[A-Za-z0-9_]{1,40}-(x_low|low|medium|high)";
@@ -77,7 +81,8 @@ public record Settings(
                 true, false, "auto", "en_GB-alan-medium", "ar_JO-kareem-medium",
                 true, false,
                 "", "",
-                "auto", true, true);
+                "auto", true, true,
+                "piper", "Charon");
     }
 
     /** Fills fields that older settings files did not have. */
@@ -109,7 +114,9 @@ public record Settings(
                 colabModel != null ? colabModel : "",
                 replyLanguage != null ? replyLanguage : d.replyLanguage,
                 voiceFollowUp != null ? voiceFollowUp : d.voiceFollowUp,
-                colabStt != null ? colabStt : d.colabStt);
+                colabStt != null ? colabStt : d.colabStt,
+                ttsEngine != null ? ttsEngine : d.ttsEngine,
+                geminiVoice != null ? geminiVoice : d.geminiVoice);
     }
 
     /** A copy with the Colab address replaced (used after normalisation). */
@@ -117,7 +124,7 @@ public record Settings(
         return new Settings(assistantName, userName, provider, anthropicModel, anthropicEffort, webSearch,
                 ollamaBaseUrl, ollamaModel, lmStudioBaseUrl, lmStudioModel, openAiBaseUrl, openAiModel,
                 allowedFolders, homeCity, voiceReplies, voiceWake, sttLanguage, voiceEnglish, voiceArabic,
-                morningBriefing, startWithWindows, url, colabModel, replyLanguage, voiceFollowUp, colabStt);
+                morningBriefing, startWithWindows, url, colabModel, replyLanguage, voiceFollowUp, colabStt, ttsEngine, geminiVoice);
     }
 
     /** A copy with the granted folders replaced (used after validation). */
@@ -125,7 +132,7 @@ public record Settings(
         return new Settings(assistantName, userName, provider, anthropicModel, anthropicEffort, webSearch,
                 ollamaBaseUrl, ollamaModel, lmStudioBaseUrl, lmStudioModel, openAiBaseUrl, openAiModel,
                 folders, homeCity, voiceReplies, voiceWake, sttLanguage, voiceEnglish, voiceArabic,
-                morningBriefing, startWithWindows, colabBaseUrl, colabModel, replyLanguage, voiceFollowUp, colabStt);
+                morningBriefing, startWithWindows, colabBaseUrl, colabModel, replyLanguage, voiceFollowUp, colabStt, ttsEngine, geminiVoice);
     }
 
     private static List<String> defaultFolders() {

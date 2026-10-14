@@ -108,6 +108,7 @@ Found a hole? See [SECURITY.md](SECURITY.md).
 | Wake-word audio | never (Vosk runs inside Haris) | never |
 | Your speech | never (local Whisper) | never — except Colab with *speech on Colab GPU* on |
 | Conversation text | never | sent to that provider |
+| Spoken replies | never (Piper speaks on this PC) | the reply text goes to Google only if you choose the Gemini voice |
 | Screenshots / photos | never | sent, only after you approve each picture |
 | Web searches | to search engines, via local SearXNG (no cookies or accounts) | same |
 | Settings, memory, logs | stay in `~/.haris` | stay in `~/.haris` |
@@ -121,6 +122,7 @@ Conversations are kept in memory only and vanish when Haris closes.
 | Vosk + `vosk-model-small-en-us` | inside Haris | "Hey Haris" — decodes only while someone is speaking |
 | Whisper (`small-int8`) | Docker, `127.0.0.1:10300` | speech → text, Arabic and English |
 | Piper | Docker, `127.0.0.1:10200` | text → speech (`en_GB-alan-medium`, `ar_JO-kareem-medium`) |
+| Gemini TTS *(optional)* | Google, your AI Studio key | natural text → speech, including Egyptian Arabic; Piper takes over if it fails |
 
 Push-to-talk: hold **Ctrl+Space** or click the microphone. A **MIC** badge shows whenever the
 microphone is open. Containers are hardened: loopback ports, read-only root filesystem, all

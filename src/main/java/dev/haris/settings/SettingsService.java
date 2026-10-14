@@ -13,6 +13,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Stream;
 
+import dev.haris.voice.GeminiSpeech;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -82,10 +83,21 @@ public class SettingsService {
         if (!s.sttLanguage().matches("auto|ar|en") || !s.replyLanguage().matches("auto|ar|en")) {
             throw new IllegalArgumentException("Languages must be auto, ar or en.");
         }
+        validateVoices(s);
+        return s.withFolders(validateFolders(s.allowedFolders())).withColabBaseUrl(colabOrigin(s.colabBaseUrl()));
+    }
+
+    /** Piper voice ids, the spoken-reply engine, and the Gemini voice must be ones Haris knows. */
+    static void validateVoices(Settings s) {
         if (!s.voiceEnglish().matches(Settings.VOICE_NAME) || !s.voiceArabic().matches(Settings.VOICE_NAME)) {
             throw new IllegalArgumentException("Voice names look like en_GB-alan-medium.");
         }
-        return s.withFolders(validateFolders(s.allowedFolders())).withColabBaseUrl(colabOrigin(s.colabBaseUrl()));
+        if (!"piper".equals(s.ttsEngine()) && !"gemini".equals(s.ttsEngine())) {
+            throw new IllegalArgumentException("Spoken replies use piper or gemini.");
+        }
+        if (!GeminiSpeech.VOICES.contains(s.geminiVoice())) {
+            throw new IllegalArgumentException("Unknown Gemini voice: " + s.geminiVoice());
+        }
     }
 
     // ── Folders ───────────────────────────────────────────────────────────

@@ -128,7 +128,12 @@ async function refreshVoiceStatus() {
     } else {
       mark('voice-stt', s.stt);
     }
-    mark('voice-tts', s.tts);
+    if (s.ttsRoute === 'gemini') {
+      $('voice-tts').textContent = s.tts ? '● Gemini (Piper backup)' : '● Gemini';
+      $('voice-tts').classList.remove('off');
+    } else {
+      mark('voice-tts', s.tts);
+    }
     mark('voice-wake', s.wake && s.wakeWords.includes('hey_haris'), '');
     if (s.wake && !s.wakeWords.includes('hey_haris')) $('voice-wake').textContent = '○ No "hey haris" model';
   } catch {
@@ -551,7 +556,7 @@ const form = $('settings-form');
 const TEXT_FIELDS = [
   'assistantName', 'userName', 'homeCity', 'provider', 'anthropicModel', 'anthropicEffort',
   'ollamaBaseUrl', 'ollamaModel', 'lmStudioBaseUrl', 'lmStudioModel', 'openAiBaseUrl', 'openAiModel',
-  'sttLanguage', 'voiceEnglish', 'voiceArabic', 'colabBaseUrl', 'colabModel', 'replyLanguage',
+  'sttLanguage', 'voiceEnglish', 'voiceArabic', 'colabBaseUrl', 'colabModel', 'replyLanguage', 'ttsEngine', 'geminiVoice',
 ];
 const CHECK_FIELDS = ['webSearch', 'voiceReplies', 'voiceWake', 'voiceFollowUp', 'morningBriefing', 'startWithWindows', 'colabStt'];
 
@@ -564,6 +569,9 @@ function fillSettings(view) {
   form.elements.allowedFolders.value = (s.allowedFolders ?? []).join('\n');
   $('anthropic-key-state').textContent = view.secrets.anthropic ? '● Key stored in vault' : '○ No key stored';
   $('openai-key-state').textContent = view.secrets['openai-compatible'] ? '● Key stored in vault' : '○ No key stored';
+  $('gemini-key-state').textContent = view.secrets.gemini
+    ? 'A Google key is saved in Windows Credential Manager. Gemini speaks; Piper takes over if it fails.'
+    : 'Get a key at aistudio.google.com → Get API key. Without one, Piper speaks.';
   $('colab-key-state').textContent = view.secrets.colab
     ? '● Token stored in vault — protected by the notebook proxy'
     : '⚠ No token: if this address goes straight to Ollama, anyone who learns it can use, add or delete '
@@ -595,7 +603,7 @@ async function saveSettings() {
   body.allowedFolders = form.elements.allowedFolders.value.split('\n').map((l) => l.trim()).filter(Boolean);
   try {
     let view = await api('/api/settings', { method: 'PUT', body });
-    const keys = [['anthropicKey', 'anthropic'], ['openAiKey', 'openai-compatible'], ['colabKey', 'colab']];
+    const keys = [['anthropicKey', 'anthropic'], ['openAiKey', 'openai-compatible'], ['colabKey', 'colab'], ['geminiKey', 'gemini']];
     for (const [field, name] of keys) {
       const value = form.elements[field].value.trim();
       if (value) {

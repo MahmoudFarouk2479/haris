@@ -28,14 +28,16 @@ public class SecretStore {
     public static final String OPENAI_COMPATIBLE = "openai-compatible";
     /** The access token printed by the Colab notebook; its proxy rejects requests without it. */
     public static final String COLAB = "colab";
+    /** Google AI Studio key, used only for Gemini's spoken replies when the user chooses them. */
+    public static final String GEMINI = "gemini";
     /** AES key for the memory file. Created by the app; never accepted from or shown to the UI. */
     public static final String MEMORY_KEY = "memory-key";
     /** SearXNG's server secret. Created by the app. */
     public static final String SEARXNG_SECRET = "searxng-secret";
 
-    public static final Set<String> NAMES = Set.of(ANTHROPIC, OPENAI_COMPATIBLE, COLAB, MEMORY_KEY, SEARXNG_SECRET);
+    public static final Set<String> NAMES = Set.of(ANTHROPIC, OPENAI_COMPATIBLE, COLAB, GEMINI, MEMORY_KEY, SEARXNG_SECRET);
     /** The only secrets the HUD may write or delete: the user's own API keys. */
-    public static final Set<String> USER_KEYS = Set.of(ANTHROPIC, OPENAI_COMPATIBLE, COLAB);
+    public static final Set<String> USER_KEYS = Set.of(ANTHROPIC, OPENAI_COMPATIBLE, COLAB, GEMINI);
 
     /** Returns the stored value, creating a random 256-bit one first if there is none. */
     public synchronized String getOrCreate(String name) {
