@@ -183,10 +183,37 @@ test('mount: a focused tab that disappears on narrowing hands focus to the input
   assert.equal(page.doc.activeElement, page.nodes.input);
 });
 
+test('mount: a focused hide button that disappears on narrowing hands focus to the input', () => {
+  const page = fakePage();
+  mountChatPanel(page);
+  page.nodes['chat-hide'].focus();
+  page.win.resize(1000);
+  assert.equal(page.nodes['chat-hide'].hidden, true);
+  assert.equal(page.doc.activeElement, page.nodes.input);
+});
+
+test('mount: markNew does nothing in the stacked layout, where the conversation is always visible', () => {
+  const page = fakePage({ width: 1000, stored: 'closed' });
+  const chat = mountChatPanel(page);
+  chat.markNew();
+  assert.ok(!page.nodes['chat-show'].classList.contains('news'));
+});
+
+test('mount: a dot set while hidden is cleared when the window narrows to the stacked layout', () => {
+  const page = fakePage({ stored: 'closed' });
+  const chat = mountChatPanel(page);
+  chat.markNew();
+  assert.ok(page.nodes['chat-show'].classList.contains('news'));
+  page.win.resize(1000);
+  assert.ok(!page.nodes['chat-show'].classList.contains('news'));
+});
+
 test('mount: Esc is not wired to the chat', () => {
   const page = fakePage();
+  const keydownListeners = [];
+  page.doc.addEventListener = (type) => { if (type === 'keydown') keydownListeners.push(type); };
   const chat = mountChatPanel(page);
-  assert.equal(page.doc.addEventListener, undefined, 'mountChatPanel adds no document key handler');
+  assert.equal(keydownListeners.length, 0, 'mountChatPanel adds no document key handler');
   assert.equal(chat.open, true);
 });
 
