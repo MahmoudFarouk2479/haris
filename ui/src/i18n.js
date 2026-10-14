@@ -1,7 +1,7 @@
 // The HUD's own words in English (default) and Arabic. Model replies are not translated here:
 // their language is the separate replyLanguage setting. Elements carry data-i18n (text),
-// data-i18n-title, data-i18n-placeholder or data-i18n-aria (attributes); main.js calls t() for
-// the texts it writes itself.
+// data-i18n-title, data-i18n-placeholder, data-i18n-aria or data-i18n-alt (attributes); main.js
+// calls t() for the texts it writes itself.
 
 export const LANGUAGES = ['en', 'ar'];
 
@@ -458,6 +458,7 @@ const ATTRIBUTES = [
   ['data-i18n-title', 'title'],
   ['data-i18n-placeholder', 'placeholder'],
   ['data-i18n-aria', 'aria-label'],
+  ['data-i18n-alt', 'alt'],
 ];
 
 /** Sets <html lang dir> and fills every data-i18n element and attribute. Returns the language used. */

@@ -48,7 +48,9 @@ export function createEmblem(container, doc = globalThis.document) {
   node(doc, 'circle', { r: 128, class: 'ring dashed' }, outer);
   star(doc, outer, 172, 'star');
 
-  node(doc, 'circle', { r: 100, class: 'pulse' }, svg);
+  // The wrapper scales with --level (the mic level); the circle inside runs the pulse animation.
+  const pulseWrap = node(doc, 'g', { class: 'pulse-wrap' }, svg);
+  node(doc, 'circle', { r: 100, class: 'pulse' }, pulseWrap);
 
   const inner = node(doc, 'g', { class: 'layer inner' }, svg);
   node(doc, 'circle', { r: 70, class: 'ring' }, inner);

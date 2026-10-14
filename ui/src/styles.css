@@ -94,6 +94,8 @@ html[lang='ar'] .tagline { letter-spacing: 0; text-transform: none; font-size: 0
 
 .state-group { display: flex; align-items: center; gap: 0.6rem; margin-inline-start: 1rem; min-width: 0; }
 .state-pill {
+  min-width: 0;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -107,7 +109,8 @@ html[lang='ar'] .tagline { letter-spacing: 0; text-transform: none; font-size: 0
   white-space: nowrap;
 }
 html[lang='ar'] .state-pill { letter-spacing: 0; font-size: 0.8rem; }
-.state-dot { width: 0.45rem; height: 0.45rem; border-radius: 50%; background: currentColor; box-shadow: 0 0 0.5rem currentColor; animation: blink 1.4s infinite; }
+#state-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.state-dot { flex: none; width: 0.45rem; height: 0.45rem; border-radius: 50%; background: currentColor; box-shadow: 0 0 0.5rem currentColor; animation: blink 1.4s infinite; }
 body[data-state='thinking'] .state-dot, body[data-state='acting'] .state-dot, body[data-state='transcribing'] .state-dot { animation-duration: 0.4s; }
 body[data-state='waiting'] .state-pill { color: var(--gold); border-color: rgba(var(--gold-rgb), 0.55); }
 body[data-state='error'] .state-pill { color: var(--danger); border-color: rgba(var(--danger-rgb), 0.55); }
@@ -162,7 +165,8 @@ html[lang='ar'] #clock-date { letter-spacing: 0; font-size: 0.72rem; }
   cursor: pointer;
 }
 .rail-btn svg, .icon-btn svg, .mic-btn svg { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.rail-btn:hover, .rail-btn:focus-visible { color: var(--line); background: var(--line-faint); outline: none; }
+.rail-btn:hover, .rail-btn:focus-visible { color: var(--line); background: var(--line-faint); }
+.rail-btn:focus-visible, .icon-btn:focus-visible { outline: 2px solid var(--line); outline-offset: 2px; }
 .rail-btn.on { color: var(--line); background: rgba(var(--line-rgb), 0.15); box-shadow: inset 2px 0 0 var(--line); }
 html[dir='rtl'] .rail-btn.on { box-shadow: inset -2px 0 0 var(--line); }
 .rail-btn.news::after {
@@ -236,7 +240,7 @@ html[lang='ar'] .drawer h3 { letter-spacing: 0; font-size: 0.8rem; }
   color: var(--ink-dim);
   cursor: pointer;
 }
-.icon-btn:hover, .icon-btn:focus-visible { color: var(--line); border-color: var(--line-dim); outline: none; }
+.icon-btn:hover, .icon-btn:focus-visible { color: var(--line); border-color: var(--line-dim); }
 .pin-btn { display: none; }
 body.can-pin .pin-btn { display: grid; }
 .pin-btn[aria-pressed='true'] { color: var(--gold); border-color: rgba(var(--gold-rgb), 0.55); }
@@ -275,7 +279,7 @@ html[lang='ar'] .rows dt { letter-spacing: 0; text-transform: none; font-size: 0
 .emblem { width: 100%; height: 100%; overflow: visible; }
 .emblem .glow-in { stop-color: var(--line); stop-opacity: 0.3; }
 .emblem .glow-out { stop-color: var(--line); stop-opacity: 0; }
-.emblem .layer, .emblem .pulse, .emblem .core { transform-box: fill-box; transform-origin: center; }
+.emblem .layer, .emblem .pulse-wrap, .emblem .pulse, .emblem .core { transform-box: fill-box; transform-origin: center; }
 .emblem .ring { fill: none; stroke: var(--line); stroke-width: 1.5; opacity: 0.8; }
 .emblem .ring.dashed { stroke-width: 1; stroke-dasharray: 2 9; opacity: 0.6; }
 .emblem .star rect { fill: none; stroke: var(--line); stroke-width: 2; opacity: 0.6; transition: stroke 0.4s, opacity 0.4s; }
@@ -283,6 +287,7 @@ html[lang='ar'] .rows dt { letter-spacing: 0; text-transform: none; font-size: 0
 .emblem .outer { animation: spin 60s linear infinite; }
 .emblem .inner { animation: spin 40s linear infinite reverse; }
 .emblem .pulse { fill: none; stroke: var(--line); stroke-width: 2; opacity: 0; }
+.emblem .pulse-wrap { transform: scale(calc(1 + var(--level, 0) * 0.5)); transition: transform 0.12s ease-out; }
 .emblem .core {
   fill: var(--gold);
   transform: scale(calc(1 + var(--level, 0) * 0.8));
@@ -516,6 +521,11 @@ html[lang='ar'] .confirm h2 { letter-spacing: 0; font-size: 1.05rem; }
   .console { width: 100%; }
   .settings { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; border-radius: 0; }
 }
+/* Half of a 1366 px laptop screen at 125 %: keep the top bar on one line. */
+@media (max-width: 640px) {
+  #assistant-name { letter-spacing: 0.12em; }
+  .cam-badge span:last-child { display: none; }
+}
 @media (max-height: 700px) {
   #emblem { width: clamp(5rem, 22vmin, 11rem); }
   .transcript { max-height: 42vh; }
@@ -523,5 +533,5 @@ html[lang='ar'] .confirm h2 { letter-spacing: 0; font-size: 1.05rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
-  .emblem .core { transform: none !important; }
+  .emblem .core, .emblem .pulse-wrap { transform: none !important; }
 }

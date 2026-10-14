@@ -42,7 +42,7 @@
       </div>
     </header>
 
-    <nav class="rail" aria-label="Panels">
+    <nav class="rail" data-i18n-aria="rail.panels" aria-label="Panels">
       <button class="rail-btn" type="button" data-drawer="system" aria-expanded="false" aria-controls="drawer-system"
               data-i18n-title="rail.system" data-i18n-aria="rail.system" title="System" aria-label="System">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></svg>
@@ -59,12 +59,12 @@
               data-i18n-title="rail.security" data-i18n-aria="rail.security" title="Security" aria-label="Security">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /><path d="M9 12l2 2 4-4" /></svg>
       </button>
-      <button class="rail-btn" type="button" id="open-memory"
+      <button class="rail-btn" type="button" id="open-memory" aria-haspopup="dialog"
               data-i18n-title="rail.memory" data-i18n-aria="rail.memory" title="Memory" aria-label="Memory">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9z" /><path d="M12 8l4 4-4 4-4-4z" /></svg>
       </button>
       <span class="rail-spacer"></span>
-      <button class="rail-btn" type="button" id="open-settings"
+      <button class="rail-btn" type="button" id="open-settings" aria-haspopup="dialog"
               data-i18n-title="rail.settings" data-i18n-aria="rail.settings" title="Settings" aria-label="Settings">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" /></svg>
       </button>
@@ -160,7 +160,7 @@
 
     <main class="stage">
       <div class="emblem-wrap"><div id="emblem"></div></div>
-      <section class="console" aria-label="Conversation">
+      <section class="console" data-i18n-aria="console.label" aria-label="Conversation">
         <div id="transcript" class="transcript" aria-live="polite"></div>
         <form id="composer" class="composer" autocomplete="off">
           <span class="caret-mark" aria-hidden="true">›</span>
@@ -181,10 +181,10 @@
   <div id="boot" class="boot" aria-hidden="true"><pre id="boot-log"></pre></div>
   <div id="flash" class="flash" aria-hidden="true"></div>
 
-  <dialog id="settings" class="settings">
+  <dialog id="settings" class="settings" aria-labelledby="settings-title">
     <form id="settings-form">
       <header>
-        <h2 data-i18n="settings.title">Settings</h2>
+        <h2 id="settings-title" data-i18n="settings.title">Settings</h2>
         <button type="button" class="btn ghost" id="close-settings" data-i18n-aria="settings.close" aria-label="Close">✕</button>
       </header>
 
@@ -370,7 +370,7 @@
       <p class="confirm-tool" id="confirm-tool"></p>
       <p class="confirm-summary" id="confirm-summary" dir="auto"></p>
       <figure class="confirm-preview" id="confirm-preview-box" hidden>
-        <img id="confirm-preview" data-i18n-aria="confirm.previewAlt" alt="" />
+        <img id="confirm-preview" data-i18n-alt="confirm.previewAlt" alt="Exactly what would be shared" />
         <figcaption data-i18n="confirm.previewCaption">This exact picture is what would be shared. Check it for anything private.</figcaption>
       </figure>
       <p class="confirm-destination" id="confirm-destination"></p>

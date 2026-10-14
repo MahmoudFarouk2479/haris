@@ -59,7 +59,8 @@ test('applyLanguage switches direction and fills text and attributes', () => {
   const label = fakeElement({ 'data-i18n': 'rail.system' });
   const input = fakeElement({ 'data-i18n-placeholder': 'composer.placeholder' });
   const button = fakeElement({ 'data-i18n-title': 'rail.settings', 'data-i18n-aria': 'rail.settings' });
-  const doc = fakeDocument([label, input, button]);
+  const picture = fakeElement({ 'data-i18n-alt': 'confirm.previewAlt' });
+  const doc = fakeDocument([label, input, button, picture]);
 
   assert.equal(applyLanguage('ar', doc), 'ar');
   assert.equal(doc.documentElement.attrs.dir, 'rtl');
@@ -68,6 +69,7 @@ test('applyLanguage switches direction and fills text and attributes', () => {
   assert.equal(input.attrs.placeholder, STRINGS.ar['composer.placeholder']);
   assert.equal(button.attrs.title, STRINGS.ar['rail.settings']);
   assert.equal(button.attrs['aria-label'], STRINGS.ar['rail.settings']);
+  assert.equal(picture.attrs.alt, STRINGS.ar['confirm.previewAlt']);
 
   applyLanguage('en', doc);
   assert.equal(doc.documentElement.attrs.dir, 'ltr');
@@ -89,7 +91,7 @@ test('brandFor keeps a custom name, Latin or Arabic, in both languages', () => {
 
 test('every key index.html uses exists', () => {
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  for (const [, key] of html.matchAll(/data-i18n(?:-title|-placeholder|-aria)?="([^"]+)"/g)) {
+  for (const [, key] of html.matchAll(/data-i18n(?:-title|-placeholder|-aria|-alt)?="([^"]+)"/g)) {
     assert.ok(STRINGS.en[key], `index.html uses missing key ${key}`);
   }
 });
