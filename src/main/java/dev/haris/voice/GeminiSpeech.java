@@ -117,8 +117,8 @@ public class GeminiSpeech {
             throws IOException {
         // Delivery instructions go in speech_metadata; the text itself is read verbatim.
         String style = ARABIC.matcher(text).find()
-                ? "Natural Egyptian Arabic (Masri) accent; calm, warm and conversational."
-                : "Calm, clear and warm; conversational.";
+                ? "Natural Egyptian Arabic (Masri) accent; warm and conversational, at a brisk, lively pace."
+                : "Clear and warm; conversational, at a brisk, lively pace.";
         Map<String, Object> body = Map.of(
                 "model", model,
                 "input", List.of(Map.of("type", "user_input", "content", List.of(Map.of(

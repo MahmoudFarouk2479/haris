@@ -13,6 +13,17 @@ Java 21 + Spring Boot core · Three.js HUD · your choice of brain:
 > *Haris* (حارس) means *guardian* in Arabic. Built after auditing a popular open-source assistant that opened firewall ports, switched the
 > Wi-Fi profile to *Private* and ran model-written code. This project designs every one of those out.
 
+![Haris HUD](docs/media/01-hud.png)
+
+<p align="center">
+  <img src="docs/media/approval.gif" width="720" alt="Haris asks before it acts: an approval card, denied by the user" /><br/>
+  <em>Every action goes through a permission gate — here the user denies opening an app.</em>
+</p>
+
+| Answers with live tools | Asks before acting | Speaks Egyptian Arabic |
+|---|---|---|
+| ![English answer](docs/media/02-english-answer.png) | ![Approval card](docs/media/03-approval.png) | ![Arabic answer](docs/media/05-arabic.png) |
+
 ## Features
 
 | | |

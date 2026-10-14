@@ -84,6 +84,16 @@ class GeminiSpeechTest {
     }
 
     @Test
+    void repliesAreSpokenAtABriskPaceNotSlowly() throws IOException {
+        for (String text : new String[] {"Hello there.", "أهلاً يا محمود"}) {
+            GeminiSpeech.synthesize(endpoint(""), KEY, "gemini-3.8-flash-tts", text, "Charon", json);
+            String style = request.get().path("input").path(0).path("content").path(0)
+                    .path("annotations").path(0).path("style").asString();
+            assertThat(style).as(text).containsIgnoringCase("brisk").doesNotContainIgnoringCase("calm");
+        }
+    }
+
+    @Test
     void rawPcmIsWrappedInAWavHeader() throws IOException {
         audio = new byte[4800];   // headerless L16, as the streaming format would send
         byte[] wav = GeminiSpeech.synthesize(endpoint(""), KEY, "gemini-3.8-flash-tts", "Hi.", "Kore", json);
