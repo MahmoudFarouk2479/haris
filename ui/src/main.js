@@ -10,7 +10,8 @@ import { api, hasToken, streamChat, subscribeEvents } from './api.js';
 import { createEmblem } from './emblem.js';
 import { mountDrawers } from './drawers.js';
 import { mountChatPanel } from './chatPanel.js';
-import { applyLanguage, brandFor, locale, speakerFor, t } from './i18n.js';
+import { applyLanguage, brandFor, getLanguage, locale, speakerFor, t } from './i18n.js';
+import { composeStatusReport, firstNameOf } from './statusReport.js';
 import { sameRules } from './settingsDiff.js';
 import { SentenceSplitter, Voice } from './voice.js';
 import { takePhoto } from './camera.js';
@@ -833,19 +834,49 @@ async function start() {
 
   // Haris greets out loud as soon as it opens, in the interface language; replies follow the
   // language the user speaks (Settings → "replies in"). On a fresh install (no engine yet) it says
-  // how to start and opens Settings; otherwise the daily briefing (once a day) or a short greeting.
-  const briefing = engineReady ? await api('/api/briefing/claim', { method: 'POST' }).catch(() => null) : null;
-  setTimeout(() => {
-    if (!engineReady) {
-      greet(t('greet.setup', { name: /^haris$/i.test(assistantName) ? t('brand.short') : assistantName }));
-      $('open-settings').click();
-    } else if (briefing?.prompt) {
-      send(briefing.prompt, { label: t('label.dailyBriefing') });
-    } else {
-      const who = userName ? t('greet.whoName', { name: userName }) : t('greet.whoDefault');
-      greet(t(`greet.${partOfDay()}`, { who }));
-    }
-  }, 1600);
+  // how to start and opens Settings. Otherwise the first launch of the day gets a full status report
+  // (system, voice engines, weather; no model call) and later launches a short greeting. The daily
+  // briefing (once a day, through the model) follows on its day.
+  const shown = sleep(1600);
+  if (!engineReady) {
+    await shown;
+    greet(t('greet.setup', { name: /^haris$/i.test(assistantName) ? t('brand.short') : assistantName }));
+    $('open-settings').click();
+    return;
+  }
+  const [claim, briefing] = await Promise.all([
+    api('/api/greeting/claim', { method: 'POST' }).catch(() => null),
+    api('/api/briefing/claim', { method: 'POST' }).catch(() => null),
+  ]);
+  const firstName = firstNameOf(userName);
+  const [report] = await Promise.all([claim?.full ? statusReport(firstName) : null, shown]);
+  if (report) {
+    greet(report);
+  } else {
+    const who = firstName ? t('greet.whoName', { name: firstName }) : t('greet.whoDefault');
+    greet(t(`greet.${partOfDay()}`, { who }));
+  }
+  if (briefing?.prompt) {
+    // send() silences Haris first, so let the greeting finish being spoken.
+    if (settingsCache?.voiceReplies !== false) await spoken();
+    send(briefing.prompt, { label: t('label.dailyBriefing') });
+  }
+}
+
+/** Resolves once queued speech has started and finished (or never started within a few seconds). */
+async function spoken() {
+  for (let i = 0; i < 25 && !voice.speaking; i++) await sleep(200);
+  for (let i = 0; i < 600 && voice.speaking; i++) await sleep(200);
+}
+
+/** Reads system, voice engines and weather in parallel; weather gets ~4 s, then is left out. */
+async function statusReport(firstName) {
+  const [system, voiceStatus, weather] = await Promise.all([
+    api('/api/system').catch(() => null),
+    api('/api/voice/status').catch(() => null),
+    Promise.race([api(`/api/weather/now?lang=${getLanguage()}`).catch(() => null), sleep(4000).then(() => null)]),
+  ]);
+  return composeStatusReport({ partOfDay: partOfDay(), firstName, system, voice: voiceStatus, weather }, t);
 }
 
 /** Shows a fixed line and speaks it — no model needed, so it works before anything is set up. */
