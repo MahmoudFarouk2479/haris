@@ -1,9 +1,16 @@
 // The icon rail and its slide-out drawers. drawerReducer holds every rule (one drawer at a time,
 // pinning only on wide windows, outside clicks, Esc) so the rules can be tested without a browser;
 // mountDrawers only wires them to the page.
+//
+// Below DOCKED_MIN_WIDTH a drawer floats over the stage and an outside click closes it. From there
+// up an open drawer takes its own place in the layout (it pushes the stage aside), so an outside
+// click leaves it open: closing it would move the layout under the pointer. It closes with its rail
+// icon, its close button or Esc. Pinning (from PIN_MIN_WIDTH) means "reopen it at the next launch".
 
 export const DRAWERS = ['system', 'activity', 'voice', 'security'];
 export const PIN_MIN_WIDTH = 1600;
+/** Same as chatPanel's CHAT_SIDE_MIN_WIDTH: the layout where the conversation is a side column. */
+export const DOCKED_MIN_WIDTH = 1200;
 export const CLOSED = Object.freeze({ open: null, pinned: false });
 
 export function canPin(width) {
@@ -25,7 +32,7 @@ export function drawerReducer(state, action, { width }) {
       if (!state.open || !canPin(width)) return state;
       return { open: state.open, pinned: !state.pinned };
     case 'outside':
-      return state.open && !isPinned(state, width) ? CLOSED : state;
+      return state.open && width < DOCKED_MIN_WIDTH ? CLOSED : state;
     case 'escape':
       return state.open ? CLOSED : state;
     default:
