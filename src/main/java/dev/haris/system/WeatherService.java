@@ -51,7 +51,7 @@ public class WeatherService {
             .followRedirects(HttpClient.Redirect.NEVER)
             .build();
 
-    private static final Duration QUICK = Duration.ofMillis(1800);
+    private static final Duration QUICK = Duration.ofMillis(3500);   // a cold DNS + TLS start can take ~3 s
 
     private final JsonMapper json;
     private final Fetcher fetcher;

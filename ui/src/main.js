@@ -870,13 +870,14 @@ async function spoken() {
 }
 
 /**
- * Reads voice engines (given ~12 s to finish starting) and weather (~4 s, then left out) in
- * parallel, then the system, so the CPU figure is a recent one rather than the launch spike.
+ * Reads voice engines (given ~12 s to finish starting) and weather (~8 s, then left out: a cold
+ * first lookup can take ~5 s) in parallel, then the system, so the CPU figure is a recent one
+ * rather than the launch spike.
  */
 async function statusReport(firstName) {
   const [voiceStatus, weather] = await Promise.all([
     waitForEngines(() => api('/api/voice/status'), { tries: 6, delayMs: 2500, sleep }),
-    Promise.race([api(`/api/weather/now?lang=${getLanguage()}`).catch(() => null), sleep(4000).then(() => null)]),
+    Promise.race([api(`/api/weather/now?lang=${getLanguage()}`).catch(() => null), sleep(8000).then(() => null)]),
   ]);
   const system = await api('/api/system').catch(() => null);
   return composeStatusReport({ partOfDay: partOfDay(), firstName, system, voice: voiceStatus, weather }, t);
