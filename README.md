@@ -133,7 +133,7 @@ Conversations are kept in memory only and vanish when Haris closes.
 | Engine | Runs | Job |
 |---|---|---|
 | Vosk + `vosk-model-small-en-us` | inside Haris | "Hey Haris" — decodes only while someone is speaking |
-| Whisper (`small-int8`) | Docker, `127.0.0.1:10300` | speech → text, Arabic and English |
+| Whisper (`small`) | Docker, `127.0.0.1:10300`, NVIDIA GPU if present, else CPU | speech → text, Arabic and English |
 | Piper | Docker, `127.0.0.1:10200` | text → speech (`en_GB-alan-medium`, `ar_JO-kareem-medium`) |
 | Gemini TTS *(optional)* | Google, your AI Studio key | natural text → speech, including Egyptian Arabic; Piper takes over if it fails |
 
@@ -141,6 +141,14 @@ Push-to-talk: hold **Ctrl+Space** or click the microphone. A **MIC** badge shows
 microphone is open. Containers are hardened: loopback ports, read-only root filesystem, all
 capabilities dropped, no-new-privileges, memory/CPU caps, pinned image versions; they start and stop
 with Haris. Set `WHISPER_OFFLINE=true` in `voice/.env` after the first start to forbid model downloads.
+
+**GPU.** With an NVIDIA GPU (Docker Desktop's `nvidia` runtime plus a working `nvidia-smi`), Haris
+starts Whisper from `voice/compose.gpu.yaml` on top of `compose.yaml`: same port, same hardening
+except the GPU device, the image and a 3 GB memory cap (see the comments in that file). If the GPU
+container does not answer, Haris falls back to the CPU container by itself; the Voice drawer shows
+**● Online (GPU)** when the GPU is in use. Set `HARIS_WHISPER_GPU=false` (environment variable, or a line in
+`voice/.env`) to always use the CPU. On an MX450 (2 GB) a short phrase transcribes in ~1.0 s on the
+GPU versus ~1.5 s on the CPU, using ~0.4 GB of video memory.
 
 **Speed.** On a laptop CPU a voice turn takes several seconds: Whisper ~3–4 s, the first spoken
 sentence ~1.5–2.5 s, plus the model. Faster options: Colab speech-to-text, a smaller Whisper

@@ -25,7 +25,10 @@ if ($RemoveData) {
         foreach ($f in @("$target\voice\compose.yaml", "$target\search\compose.yaml")) {
             if (Test-Path $f) {
                 $env:SEARXNG_SECRET = 'removing'
-                docker compose -f $f down --volumes 2>$null | Out-Null
+                $files = @('-f', $f)
+                $gpu = Join-Path (Split-Path $f) 'compose.gpu.yaml'   # declares the GPU model volume
+                if (Test-Path $gpu) { $files += @('-f', $gpu) }
+                docker compose @files down --volumes 2>$null | Out-Null
             }
         }
     }

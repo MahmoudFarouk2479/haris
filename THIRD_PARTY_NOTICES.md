@@ -29,6 +29,7 @@ the first time they are used.
 | Component | Used for | License |
 |---|---|---|
 | `rhasspy/wyoming-whisper`, faster-whisper, Whisper models | speech-to-text | MIT |
+| `lscr.io/linuxserver/faster-whisper:gpu-v3.8.1-ls71` (GPU speech-to-text, only with an NVIDIA GPU) | speech-to-text on the GPU | image build files GPL-3.0 (run unmodified); wyoming-faster-whisper, faster-whisper, CTranslate2 MIT; NVIDIA cuBLAS/cuDNN under the NVIDIA software license |
 | `rhasspy/wyoming-piper`, Piper | text-to-speech | MIT (engine) |
 | Piper voices (`en_GB-alan-medium`, `ar_JO-kareem-medium`, …) | voices | **per voice** — see each voice's `MODEL_CARD` before commercial use |
 | SearXNG (`searxng/searxng`) | private web search | AGPL-3.0 (run unmodified as a separate service) |
