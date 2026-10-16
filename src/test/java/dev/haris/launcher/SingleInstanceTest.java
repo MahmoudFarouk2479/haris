@@ -111,7 +111,14 @@ class SingleInstanceTest {
             other.destroy();   // like a crash: the process never releases the lock itself
             other.waitFor(10, TimeUnit.SECONDS);
         }
-        Optional<SingleInstance> next = SingleInstance.tryAcquire(dir);
+        // Windows frees a dead process's locks shortly after the process is gone, not at the same instant.
+        Optional<SingleInstance> next = Optional.empty();
+        for (int i = 0; i < 50 && next.isEmpty(); i++) {
+            next = SingleInstance.tryAcquire(dir);
+            if (next.isEmpty()) {
+                Thread.sleep(100);
+            }
+        }
         next.ifPresent(held::add);
         assertThat(next).as("the OS released the dead process's lock").isPresent();
     }
