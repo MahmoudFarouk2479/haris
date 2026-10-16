@@ -545,3 +545,21 @@ export function speakerFor(name) {
   const n = (name ?? '').trim();
   return (isDefaultName(n) ? t('brand.short') : n).toUpperCase();
 }
+
+const ROLE_LABELS = { user: 'who.you', error: 'who.system', notice: 'who.system', reminder: 'who.reminder' };
+
+/** The header of a transcript message: its role's label, or the assistant's name for its replies. */
+export function messageHeaderFor(role, assistantName) {
+  const key = ROLE_LABELS[role];
+  return key ? t(key) : speakerFor(assistantName);
+}
+
+/**
+ * After a language switch: re-labels the header of every message already in the transcript (the
+ * headers carry their role in data-role). The message bodies are left exactly as they are.
+ */
+export function relabelMessages(root, assistantName) {
+  for (const el of root.querySelectorAll('header[data-role]')) {
+    el.textContent = messageHeaderFor(el.getAttribute('data-role'), assistantName);
+  }
+}

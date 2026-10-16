@@ -10,7 +10,7 @@ import { api, hasToken, streamChat, subscribeEvents } from './api.js';
 import { createEmblem } from './emblem.js';
 import { mountDrawers } from './drawers.js';
 import { mountChatPanel } from './chatPanel.js';
-import { applyLanguage, brandFor, getLanguage, locale, speakerFor, t } from './i18n.js';
+import { applyLanguage, brandFor, getLanguage, locale, messageHeaderFor, relabelMessages, t } from './i18n.js';
 import { composeStatusReport, firstNameOf, waitForEngines } from './statusReport.js';
 import { briefingQuietMs, deliverBriefing } from './briefing.js';
 import { sameRules } from './settingsDiff.js';
@@ -345,8 +345,8 @@ function addMessage(role, text = '') {
   const el = document.createElement('article');
   el.className = `msg ${role}`;
   const who = document.createElement('header');
-  who.textContent = { user: t('who.you'), error: t('who.system'), notice: t('who.system'), reminder: t('who.reminder') }[role]
-    ?? speakerFor(assistantName);
+  who.dataset.role = role;   // so a language switch can re-label it (relabelMessages)
+  who.textContent = messageHeaderFor(role, assistantName);
   const body = document.createElement('div');
   body.className = 'body';
   body.dir = 'auto';
@@ -637,6 +637,7 @@ function applyIdentity(s) {
 function applyUi(s) {
   applyLanguage(s.uiLanguage === 'ar' ? 'ar' : 'en');
   applyIdentity(s);
+  relabelMessages(transcript, assistantName);   // headers only; what was said stays as it was
   setState(document.body.dataset.state || 'idle');
   tickClock();
   setContext(externalNow);
