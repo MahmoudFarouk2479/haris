@@ -42,34 +42,43 @@ $backup = Join-Path ([IO.Path]::GetTempPath()) ('haris-config-' + [guid]::NewGui
 # This app used to be called JARVIS: its voice\.env carries over too (a Haris one wins, saved after it).
 $legacy = Join-Path $env:LOCALAPPDATA 'Programs\JARVIS'
 $kept = @()
-if (Test-Path (Join-Path $legacy 'JARVIS.exe')) { $kept += @(Save-UserConfig $legacy $backup) }
-$kept += @(Save-UserConfig $target $backup)
-$kept = @($kept | Sort-Object -Unique)
-
-# Remove the old JARVIS program files and shortcuts. Your data in ~\.jarvis is not touched here;
-# Haris moves it to ~\.haris on its first start.
-if (Test-Path (Join-Path $legacy 'JARVIS.exe')) {
-    Write-Host ">> Removing the old JARVIS program files ($legacy)" -ForegroundColor Cyan
-    Remove-Item $legacy -Recurse -Force
-}
-foreach ($lnk in @((Join-Path ([Environment]::GetFolderPath('Programs')) 'JARVIS.lnk'),
-                   (Join-Path ([Environment]::GetFolderPath('Desktop')) 'JARVIS.lnk'))) {
-    Remove-Item $lnk -ErrorAction SilentlyContinue
-}
-
-Write-Host ">> Installing to $target" -ForegroundColor Cyan
+$replacing = $false   # true once old program files may be gone: from then on the backup is put back
+$failure = $null
 try {
+    if (Test-Path (Join-Path $legacy 'JARVIS.exe')) { $kept += @(Save-UserConfig $legacy $backup) }
+    $kept += @(Save-UserConfig $target $backup)
+    $kept = @($kept | Sort-Object -Unique)
+
+    $replacing = $true
+    # Remove the old JARVIS program files and shortcuts. Your data in ~\.jarvis is not touched here;
+    # Haris moves it to ~\.haris on its first start.
+    if (Test-Path (Join-Path $legacy 'JARVIS.exe')) {
+        Write-Host ">> Removing the old JARVIS program files ($legacy)" -ForegroundColor Cyan
+        Remove-Item $legacy -Recurse -Force
+    }
+    foreach ($lnk in @((Join-Path ([Environment]::GetFolderPath('Programs')) 'JARVIS.lnk'),
+                       (Join-Path ([Environment]::GetFolderPath('Desktop')) 'JARVIS.lnk'))) {
+        Remove-Item $lnk -ErrorAction SilentlyContinue
+    }
+
+    Write-Host ">> Installing to $target" -ForegroundColor Cyan
     if (Test-Path $target) { Remove-Item $target -Recurse -Force }   # upgrade: replace the program files only
     New-Item -ItemType Directory -Force $target | Out-Null
     Copy-Item (Join-Path $source '*') $target -Recurse -Force
     Copy-Item (Join-Path $PSScriptRoot 'uninstall.ps1') $target -Force
+} catch {
+    $failure = $_
+    throw
 } finally {
-    # Also when the copy failed half-way, so your settings files are never lost.
+    # Also when something failed half-way, so your settings files are never lost. Before anything was
+    # removed, your files are still in place and the (possibly partial) backup is simply dropped.
     try {
-        Restore-UserConfig $backup $target
+        if ($replacing) { Restore-UserConfig $backup $target }
         Remove-Item -LiteralPath $backup -Recurse -Force -ErrorAction SilentlyContinue
     } catch {
-        Write-Host "!! Could not put back your settings files; copies are in $backup" -ForegroundColor Yellow
+        $why = "!! Could not put back your settings files ($($_.Exception.Message)); copies are in $backup"
+        if ($failure) { $why += ". The install had already failed: $($failure.Exception.Message)" }
+        Write-Host $why -ForegroundColor Yellow
         throw
     }
 }
