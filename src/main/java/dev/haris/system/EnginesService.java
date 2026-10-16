@@ -55,6 +55,8 @@ public class EnginesService {
     private final ReentrantLock voiceLock = new ReentrantLock();
     /** The background download of the GPU image, if one is running. */
     private volatile Process pull;
+    /** Starts the {@code docker pull} process; a test stands in for it. */
+    ProcessStarter pullStarter = ProcessBuilder::start;
     private final AtomicBoolean pulling = new AtomicBoolean();
     /** Written when the GPU Whisper did not start, so later launches go straight to the CPU for a while. */
     private final Path gpuFailedFile = SettingsService.dataDir().resolve("whisper-gpu-failed");
@@ -212,17 +214,24 @@ public class EnginesService {
      * carries on from there at the next start. Haris switches to the GPU at the next start, not
      * mid-session, so speech-to-text is never taken away while the user may be talking.
      */
-    private void pullImage(Path file, String image) {
+    void pullImage(Path file, String image) {
         if (stopping) {
             return;
         }
         long start = System.currentTimeMillis();
         log.info("Downloading the GPU speech-to-text image {} in the background (several GB, one time)...", image);
         try {
-            Process p = new ProcessBuilder("docker", "pull", image)
+            Process p = pullStarter.start(new ProcessBuilder("docker", "pull", image)
                     .directory(file.getParent().toFile())
-                    .redirectErrorStream(true).start();
+                    .redirectErrorStream(true));
             pull = p;
+            // stop() may have run after the check above but before the process was stored, and then
+            // found nothing to end: check again, so the docker pull never outlives Haris.
+            if (stopping) {
+                p.destroy();
+                log.info("GPU image download paused because Haris is closing; it continues at the next start.");
+                return;
+            }
             WhisperRoute.PullProgress progress = new WhisperRoute.PullProgress();
             StringBuilder last = new StringBuilder();
             Thread reader = Thread.ofVirtual().start(() -> {
@@ -493,6 +502,12 @@ public class EnginesService {
         cmd.addAll(List.of(args));
         Run r = run(cmd, 30_000);
         return r.exit() < 0 ? "" : r.out();
+    }
+
+    /** Starts a process from a builder ({@link ProcessBuilder#start} outside tests). */
+    @FunctionalInterface
+    interface ProcessStarter {
+        Process start(ProcessBuilder builder) throws IOException;
     }
 
     /** A finished command: its exit code (-1 if it could not run or timed out) and its output. */
