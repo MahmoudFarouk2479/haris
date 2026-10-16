@@ -7,7 +7,9 @@
 # (127.0.0.1:10300), so the rest of Haris does not know which one answers. If this container does
 # not come up, Haris starts the CPU one from compose.yaml alone instead. The image is several GB:
 # when it is not on this machine yet, Haris starts the CPU Whisper and downloads it in the
-# background, and uses the GPU from the next start.
+# background, and uses the GPU from the next start. It needs Docker Compose 2.24.4 or later (for the
+# "!override" merge tag below); with an older Compose, Haris keeps Whisper on the CPU and does not
+# download the image.
 #
 # Hardening kept from compose.yaml (merged in): read-only root filesystem, tmpfs /tmp, no Linux
 # capabilities, no privilege escalation, 127.0.0.1-only port, memory/CPU caps, local log driver,

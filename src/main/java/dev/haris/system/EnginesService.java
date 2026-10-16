@@ -112,7 +112,8 @@ public class EnginesService {
      * Piper is up as soon as this returns; whether the GPU Whisper answers is checked on a side thread,
      * which falls back to the CPU Whisper if it does not. A GPU image that is not downloaded yet never
      * holds this up: Whisper starts on the CPU and the image is pulled in the background (see
-     * {@link WhisperRoute#withImage}); a GPU that failed recently is skipped for a few days.
+     * {@link WhisperRoute#withImage}); a GPU that failed recently (at {@code up} or after it) is skipped
+     * for a few days, and a Docker Compose older than {@link WhisperRoute#MIN_COMPOSE} skips it altogether.
      */
     private void startVoice(Path file) {
         boolean allowed = WhisperRoute.gpuAllowed(gpuSwitch,
@@ -121,6 +122,15 @@ public class EnginesService {
         String gpuImage = null;
         if (device == Device.GPU && !Files.isRegularFile(gpuFile(file))) {
             device = Device.CPU;
+        }
+        if (device == Device.GPU) {
+            // Checked before the image: an old Compose cannot use it, so it is not downloaded either.
+            String compose = docker("compose", "version", "--short").strip();
+            if (!WhisperRoute.composeCanApplyGpuFile(compose)) {
+                log.info("Docker Compose {} cannot apply compose.gpu.yaml ({} or later is needed); "
+                        + "speech-to-text uses the CPU.", compose.isEmpty() ? "(no answer)" : compose, WhisperRoute.MIN_COMPOSE);
+                device = Device.CPU;
+            }
         }
         if (device == Device.GPU) {
             gpuImage = WhisperRoute.imageOf(gpuFile(file));
@@ -137,6 +147,8 @@ public class EnginesService {
         boolean up = whisper.up(device);
         if (!up && device == Device.GPU && !stopping) {
             log.warn("Could not start the voice engines with the GPU; trying the CPU.");
+            // Remembered like a GPU Whisper that never answered, so later launches do not retry it every time.
+            rememberGpu(false, gpuImage);
             device = Device.CPU;
             up = whisper.up(device);
         }

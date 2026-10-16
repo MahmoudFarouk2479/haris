@@ -299,4 +299,48 @@ class WhisperRouteTest {
         assertThat(gpu).doesNotContain("environment: !override").doesNotContain("environment: !reset");
         assertThat(gpu).contains("\"-m\", \"wyoming_faster_whisper\"");
     }
+
+    // ── a Compose too old for compose.gpu.yaml skips the GPU (and its download) ──
+
+    @Test
+    void composeFromTwoTwentyFourFourCanApplyTheGpuFile() {
+        assertThat(WhisperRoute.composeCanApplyGpuFile("2.24.4")).isTrue();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("v2.24.4")).isTrue();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("2.24.10")).isTrue();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("2.25.0")).isTrue();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("2.29.7-desktop.1")).isTrue();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("5.6.0\n")).isTrue();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("Docker Compose version v2.30.3")).isTrue();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("3.0.0")).isTrue();
+    }
+
+    @Test
+    void anOlderOrUnknownComposeCannot() {
+        assertThat(WhisperRoute.composeCanApplyGpuFile("2.24.3")).isFalse();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("2.23.9")).isFalse();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("2.9.40")).isFalse();   // numbers, not text: 9 < 24
+        assertThat(WhisperRoute.composeCanApplyGpuFile("v2.20.2-desktop.1")).isFalse();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("1.29.2")).isFalse();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("")).isFalse();
+        assertThat(WhisperRoute.composeCanApplyGpuFile(null)).isFalse();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("docker: 'compose' is not a docker command.")).isFalse();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("99999999999.0.0")).isFalse();
+    }
+
+    @Test
+    void versionsCompareByNumber() {
+        assertThat(WhisperRoute.compareVersions(new int[] {2, 24, 4}, new int[] {2, 24, 4})).isZero();
+        assertThat(WhisperRoute.compareVersions(new int[] {2, 3, 0}, new int[] {2, 24, 4})).isNegative();
+        assertThat(WhisperRoute.compareVersions(new int[] {10, 0, 0}, new int[] {2, 24, 4})).isPositive();
+        assertThat(WhisperRoute.parseVersion("v2.29.7-desktop.1")).containsExactly(2, 29, 7);
+        assertThat(WhisperRoute.parseVersion("2.29")).isNull();
+    }
+
+    @Test
+    void theGpuFileStillUsesTheOverrideTagTheMinimumIsFor() throws Exception {
+        // If compose.gpu.yaml stops using "!override", MIN_COMPOSE may be lowered again.
+        String gpu = Files.readString(Path.of("voice", "compose.gpu.yaml"));
+        assertThat(gpu).contains("volumes: !override");
+        assertThat(WhisperRoute.MIN_COMPOSE).isEqualTo("2.24.4");
+    }
 }
