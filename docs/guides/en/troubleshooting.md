@@ -42,8 +42,13 @@ Haris picks a random free port between 41000 and 59000 once and stores it in `~\
 the browser remembers the microphone permission. If that port is taken by another program at
 launch, Haris picks a new one and the browser asks for the microphone again; that is expected.
 
-Haris does not prevent a second copy from starting. If you start it twice, the second core gets
-another port and its own window. Close both and start Haris once.
+Only one Haris runs at a time. Starting it again while it runs brings the existing window to the
+front (restored if it was minimised) instead of starting a second core; the log says *"Haris is
+already running; this second launch brought its window to the front and exited."* If Windows does
+not let it take the focus, its taskbar button flashes instead. If you start Haris while it is still
+shutting down (in the 20 seconds after you closed the window, or while it stops its engines), the new
+launch waits for that to finish and then opens a fresh window. After a crash nothing is left behind
+that could block the next start.
 
 ## Docker is not running
 

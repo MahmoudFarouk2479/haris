@@ -69,6 +69,7 @@ Everything Haris writes lives in `~\.haris` (for example `C:\Users\you\.haris`):
 | `logs\haris.log` | The app log, up to 2 MB per file, three old files kept. Start-up, engine and error events only, never conversation text, file contents or keys. |
 | `hud-profile\` | The HUD window's private browser profile (microphone permission, pinned drawer, chat column choice). |
 | `port` | The local port Haris reuses, so the browser remembers the microphone permission. |
+| `instance.lock`, `instance` | The one-copy-only lock (Windows releases it when Haris exits, even after a crash) and the HUD window's process number, so a second launch can bring that window forward. No token or key. |
 | `last-greeting`, `last-briefing` | The date of the last status report and briefing. |
 | `whisper-gpu-failed` | Present only when the GPU speech-to-text failed recently. |
 

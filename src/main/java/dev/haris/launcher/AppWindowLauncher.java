@@ -77,6 +77,7 @@ public class AppWindowLauncher {
             Process process = new ProcessBuilder(cmd).redirectErrorStream(true)
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
             hudWindow.setProcess(process);
+            SingleInstance.windowOpened(process.pid());   // a second launch brings this window forward
             log.info("Haris HUD opened on 127.0.0.1:{}", token.port());
             // Not process.onExit(): when an Edge process for this profile already exists, the one we
             // start hands the window over and exits at once. Shutdown follows the HUD's own
@@ -93,6 +94,7 @@ public class AppWindowLauncher {
             return;
         }
         log.info("HUD window closed — shutting the core down.");
+        SingleInstance.closing();   // a launch from now on waits for this exit instead of looking for the window
         Thread.ofPlatform().name("shutdown").start(() -> System.exit(SpringApplication.exit(context, () -> 0)));
     }
 
