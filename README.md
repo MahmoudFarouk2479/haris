@@ -13,6 +13,12 @@ Java 21 + Spring Boot core · SVG HUD (English or Arabic) · your choice of brai
 > *Haris* (حارس) means *guardian* in Arabic. Built after auditing a popular open-source assistant that opened firewall ports, switched the
 > Wi-Fi profile to *Private* and ran model-written code. This project designs every one of those out.
 
+## Guides
+
+Step-by-step user and developer guides in **[English](docs/guides/en/README.md)** and
+**[العربية](docs/guides/ar/README.md)**: getting started, engines, voice, using Haris, settings,
+security and privacy, troubleshooting, FAQ, and building from source.
+
 ![Haris HUD](docs/media/01-hud.png)
 
 <p align="center">
