@@ -39,6 +39,14 @@ public class SecretStore {
     /** The only secrets the HUD may write or delete: the user's own API keys. */
     public static final Set<String> USER_KEYS = Set.of(ANTHROPIC, OPENAI_COMPATIBLE, COLAB, GEMINI);
 
+    /** Opens the OS vault; a test stands in for it. */
+    @FunctionalInterface
+    interface Vault {
+        Keyring open() throws BackendNotSupportedException;
+    }
+
+    Vault vault = Keyring::create;
+
     /** Returns the stored value, creating a random 256-bit one first if there is none. */
     public synchronized String getOrCreate(String name) {
         return get(name).orElseGet(() -> {
@@ -52,7 +60,7 @@ public class SecretStore {
 
     public Optional<String> get(String name) {
         requireKnown(name);
-        try (Keyring keyring = Keyring.create()) {
+        try (Keyring keyring = vault.open()) {
             String value = keyring.getPassword(SERVICE, name);
             return Optional.ofNullable(value).filter(v -> !v.isBlank());
         } catch (PasswordAccessException e) {
@@ -68,7 +76,7 @@ public class SecretStore {
 
     /** Moves a secret stored by the old JARVIS version to the current name, once. */
     private Optional<String> migrateLegacy(String name) {
-        try (Keyring keyring = Keyring.create()) {
+        try (Keyring keyring = vault.open()) {
             String value = keyring.getPassword(LEGACY_SERVICE, name);
             if (value == null || value.isBlank()) {
                 return Optional.empty();
@@ -91,19 +99,27 @@ public class SecretStore {
         if (value == null || value.isBlank() || value.length() > 512) {
             throw new IllegalArgumentException("Invalid secret value");
         }
-        try (Keyring keyring = Keyring.create()) {
+        try (Keyring keyring = vault.open()) {
             keyring.setPassword(SERVICE, name, value.strip());
         } catch (Exception e) {
             throw new IllegalStateException("Could not save to the OS credential vault", e);
         }
     }
 
+    /**
+     * Deletes the secret, and also the old JARVIS entry of the same name: otherwise the next read
+     * would find that one and move it back (see {@link #migrateLegacy}), undoing the removal.
+     */
     public void delete(String name) {
         requireKnown(name);
-        try (Keyring keyring = Keyring.create()) {
-            keyring.deletePassword(SERVICE, name);
-        } catch (PasswordAccessException e) {
-            // already absent
+        try (Keyring keyring = vault.open()) {
+            for (String service : new String[] {SERVICE, LEGACY_SERVICE}) {
+                try {
+                    keyring.deletePassword(service, name);
+                } catch (PasswordAccessException e) {
+                    // already absent
+                }
+            }
         } catch (Exception e) {
             throw new IllegalStateException("Could not delete from the OS credential vault", e);
         }
