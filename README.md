@@ -214,7 +214,9 @@ Start-with-Windows entry) to its new name; the installer removes the old program
 
 ## Connect
 
-Built by **Mahmoud Farouk**. ⭐ Star the repo if Haris is useful to you, and say hi:
+Mahmoud Farouk, from Cairo, Egypt, has 8+ years of experience in software engineering, building enterprise Java systems — Spring Boot, microservices and secure financial platforms. He created Haris to prove that a desktop AI assistant can be genuinely useful without ever trusting the model.
+
+⭐ Star the repo if Haris is useful to you, and say hi:
 
 | Platform | Link |
 |---|---|
