@@ -164,6 +164,10 @@ test('a core error with a known code is shown in the HUD language and points to 
       assert.ok(STRINGS[lang][key].includes('%USERPROFILE%\\.haris\\logs\\haris.log'), `${lang}.${key}`);
     }
   }
+  for (const key of ['error.core', 'settings.logHint']) {
+    // In right-to-left text the path is isolated as left-to-right, or it renders as "USERPROFILE%\…%".
+    assert.ok(STRINGS.ar[key].includes('⁦%USERPROFILE%\\.haris\\logs\\haris.log⁩'), `ar.${key} isolates the path`);
+  }
   const all = JSON.stringify(STRINGS);
   assert.doesNotMatch(all, /console log/i, 'the installed app has no console');
 });

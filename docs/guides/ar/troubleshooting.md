@@ -167,7 +167,7 @@ until it says it is running, then close Haris and start it again: Haris starts w
 | *"This model does not support tools, so I can only talk…"* | اختر نموذجاً يدعم الأدوات ([المحركات](engines.md#اختيار-النموذج)). |
 | *"Still working on the previous message."* | طلب واحد في كل مرة؛ انتظر الرد. |
 | *"The core is not responding."* | النواة توقفت. أغلق النافذة وشغّل حارس من جديد. |
-| *«حدث خطأ في النواة. التفاصيل في ملف السجل: %USERPROFILE%\\.haris\\logs\\haris.log»* | خطأ غير متوقع في النواة. افتح ذلك الملف (الصق المسار في مستكشف الملفات)؛ آخر سطوره تذكر الخطأ. نفس المسار يظهر أسفل نافذة الإعدادات. |
+| *«حدث خطأ في النواة. التفاصيل في ملف السجل: ⁦%USERPROFILE%\\.haris\\logs\\haris.log⁩»* | خطأ غير متوقع في النواة. افتح ذلك الملف (الصق المسار في مستكشف الملفات)؛ آخر سطوره تذكر الخطأ. نفس المسار يظهر أسفل نافذة الإعدادات. |
 | *"I stopped after 12 steps to stay on the safe side. Ask me to continue if needed."* | الطلب احتاج خطوات أدوات كثيرة. قل «كمّل». |
 | *"This conversation got very long, so I started a fresh one."* | يحدث تلقائياً بعد محادثة طويلة جداً. |
 
