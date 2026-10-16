@@ -161,6 +161,8 @@ async function refreshVoiceStatus() {
     }
     mark('voice-wake', s.wake && s.wakeWords.includes('hey_haris'));
     if (s.wake && !s.wakeWords.includes('hey_haris')) $('voice-wake').textContent = t('voice.noWakeModel');
+    // A long status wraps to two lines; the tooltip always has all of it.
+    for (const id of ['voice-stt', 'voice-tts', 'voice-wake']) $(id).title = $(id).textContent;
   } catch {
     /* ignore */
   }

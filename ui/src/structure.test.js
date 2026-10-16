@@ -63,3 +63,11 @@ test('speech plays with a little headroom (volume only, never faster or slower)'
   assert.doesNotMatch(voiceJs, /analyser\.connect\(this\.out\.destination\)/);
   assert.doesNotMatch(voiceJs, /playbackRate|detune/);
 });
+
+test('long voice statuses wrap to two lines with the full text in a tooltip, not an ellipsis', () => {
+  const css = readFileSync(new URL('./styles.css', import.meta.url), 'utf8');
+  const rule = css.match(/\.voice-rows dd \{([^}]*)\}/)?.[1] ?? '';
+  assert.match(rule, /white-space: normal/);
+  assert.match(rule, /-webkit-line-clamp: 2/);
+  assert.match(main, /\$\(id\)\.title = \$\(id\)\.textContent/);
+});
