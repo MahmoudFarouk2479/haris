@@ -45,7 +45,8 @@ test('a full-scale peak leaves the chain below 0 dBFS, make-up gain included', (
   const { threshold, ratio } = SPEECH_LIMITER;
   const curve = (db) => (db <= threshold ? db : threshold + (db - threshold) / ratio);
   const makeupDb = -curve(0) * 0.6;
-  const peakIn = 20 * Math.log10(SPEECH_GAIN);
-  assert.ok(curve(peakIn) + makeupDb < -0.5, `peak ${curve(peakIn) + makeupDb} dBFS`);
-  assert.ok(SPEECH_GAIN >= 0.7 && SPEECH_GAIN <= 0.9);
+  const out = (raw) => curve(20 * Math.log10(raw * SPEECH_GAIN)) + makeupDb;
+  assert.ok(out(1) < -1.3, `full-scale peak ${out(1)} dBFS`);
+  assert.ok(out(1.2) < -1.1, `overshooting peak ${out(1.2)} dBFS`);   // resampling overshoot
+  assert.equal(SPEECH_GAIN, 0.7);
 });
