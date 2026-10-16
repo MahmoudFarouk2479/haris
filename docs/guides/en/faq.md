@@ -94,8 +94,8 @@ Only if you turn on **Settings → Identity → Start Haris when I sign in to Wi
 
 ### How do I update Haris?
 
-Close it and run the new release's `install.ps1`. Your data in `~\.haris` and your keys stay; only
-a `voice\.env` inside the program folder is replaced ([Getting started](getting-started.md#upgrading)).
+Close it and run the new release's `install.ps1`. Your data in `~\.haris`, your keys and a
+`voice\.env` you created in the program folder all stay ([Getting started](getting-started.md#upgrading)).
 
 ### What happens when I close the window?
 

@@ -52,9 +52,11 @@ or anything outside your user profile.
 ### Upgrading
 
 Close Haris, then run the new version's `install.ps1`. It replaces the program files only; your
-settings, memory, reminders and keys in `~\.haris` and Credential Manager stay. One exception: a
-`voice\.env` file you created inside the program folder is replaced too, so keep a copy (see
-[Voice](voice.md#advanced-voice-settings)).
+settings, memory, reminders and keys in `~\.haris` and Credential Manager stay. Settings files you
+created inside the program folder (`voice\.env`, and any other `.env` such as `search\.env`) are kept
+too: the installer saves them before it replaces the files, puts them back afterwards and lists
+them (`Kept your voice\.env`). It never replaces yours with an example file. See
+[Voice](voice.md#advanced-voice-settings).
 
 ## The first launch
 
