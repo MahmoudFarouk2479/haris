@@ -48,6 +48,15 @@ test('first name: compound Latin names stay whole', () => {
   assert.equal(firstNameOf('Abdelrahman Ali'), 'Abdelrahman');
   assert.equal(firstNameOf('Elizabeth Taylor'), 'Elizabeth');
   assert.equal(firstNameOf('Abdel'), 'Abdel');
+  assert.equal(firstNameOf('Abd Al Rahman Ali'), 'Abd Al Rahman');   // the article after a prefix still joins
+});
+
+test('first name: "Al" is a name of its own, not a compound prefix', () => {
+  assert.equal(firstNameOf('Al Smith'), 'Al');
+  assert.equal(firstNameOf('al pacino'), 'al');
+  assert.equal(firstNameOf('Al'), 'Al');
+  assert.equal(firstNameOf('عبدالرحمن الشريف'), 'عبدالرحمن');      // «ال»-joined forms are unchanged
+  assert.equal(firstNameOf('عبد الرحمن'), 'عبد الرحمن');
 });
 
 test('first name: a leading title is skipped', () => {
@@ -56,6 +65,24 @@ test('first name: a leading title is skipped', () => {
   assert.equal(firstNameOf('د. محمود فاروق'), 'محمود');
   assert.equal(firstNameOf('م. عبد الله'), 'عبد الله');
   assert.equal(firstNameOf('Dr.'), 'Dr.');                          // a title alone is still a name
+});
+
+test('first name: every Latin title is skipped with or without its dot', () => {
+  for (const title of ['Mr', 'Mrs', 'Ms', 'Dr', 'Prof', 'Eng']) {
+    assert.equal(firstNameOf(`${title} Sara Ali`), 'Sara', title);
+    assert.equal(firstNameOf(`${title}. Sara Ali`), 'Sara', `${title}.`);
+    assert.equal(firstNameOf(`${title.toUpperCase()}. Sara`), 'Sara', `${title.toUpperCase()}.`);
+  }
+  assert.equal(firstNameOf('Prof Abdel Rahman Ali'), 'Abdel Rahman');
+  assert.equal(firstNameOf('أ.د. محمود فاروق'), 'محمود');
+  assert.equal(firstNameOf('Drew Barrymore'), 'Drew');               // a name that starts like a title
+  assert.equal(firstNameOf('Ms.. Sara'), 'Ms..');                    // one dot only
+});
+
+test('first name: an undotted title is a title only before another word; alone it is the name', () => {
+  for (const name of ['Eng', 'Ms', 'Dr', 'Mr', 'Prof', 'ENG']) assert.equal(firstNameOf(name), name);
+  assert.equal(firstNameOf('  Eng  '), 'Eng');
+  assert.equal(firstNameOf('Eng Ahmed'), 'Ahmed');
 });
 
 test('weather codes map to the nine condition groups', () => {

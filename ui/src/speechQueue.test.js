@@ -1,7 +1,7 @@
 // Run with: npm test (in ui/)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SpeechQueue } from './speechQueue.js';
+import { BATCH_GROWTH, SpeechQueue } from './speechQueue.js';
 
 /** A fake engine whose requests finish only when the test says so. */
 function fakeEngine({ fail = [] } = {}) {
@@ -51,7 +51,63 @@ test('never more than one request at a time', async () => {
   await engine.finish();
   await engine.finish();
   assert.equal(engine.maxInFlight, 1);
-  assert.deepEqual(engine.sent, ['A.', 'B. C. D.', 'E.']);
+  // 'A.' alone; then at most 3 x 2 chars ('B. C.'); 'E.' arrived meanwhile and joins 'D.'.
+  assert.deepEqual(engine.sent, ['A.', 'B. C.', 'D. E.']);
+});
+
+test('batches grow step by step instead of the whole rest of the reply after the first sentence', async () => {
+  const engine = fakeEngine();
+  const ready = [];
+  const q = new SpeechQueue(engine.request, (audio) => ready.push(audio));
+  const sentences = Array.from({ length: 20 }, (_, i) => `Sentence number ${String(i).padStart(2, '0')} is here.`);   // 27 chars
+  for (const s of sentences) q.push(s);
+  while (engine.sent.join(' ').length < sentences.join(' ').length) await engine.finish();
+  await engine.finish();
+  // Every sentence is spoken once, in order.
+  assert.equal(engine.sent.join(' '), sentences.join(' '));
+  assert.equal(engine.maxInFlight, 1);
+  assert.deepEqual(engine.sent.map((t) => t.split(' Sentence').length), [1, 2, 5, 12]);
+  for (let i = 1; i < engine.sent.length; i++) {
+    assert.ok(engine.sent[i].length <= engine.sent[i - 1].length * BATCH_GROWTH, `batch ${i}`);
+  }
+  // Each request's audio reaches the player in the order the requests were sent.
+  assert.deepEqual(await Promise.all(ready), engine.sent.map((t) => `audio:${t}`));
+});
+
+test('the next request is sent as soon as the one before returns, while that audio still plays', async () => {
+  const engine = fakeEngine();
+  const q = new SpeechQueue(engine.request, () => {});
+  q.push('First part, ');
+  q.push('then the second sentence.');
+  q.push('And a third one.');
+  assert.deepEqual(engine.sent, ['First part,']);
+  await engine.finish();   // the first audio is ready (and starts playing): the next batch is already on its way
+  assert.equal(engine.sent.length, 2);
+  assert.equal(engine.maxInFlight, 1);
+});
+
+test('a new reply starts small again once the queue has gone idle', async () => {
+  const engine = fakeEngine();
+  const q = new SpeechQueue(engine.request, () => {});
+  q.push('A long first sentence that sets a high limit.');
+  await engine.finish();
+  q.push('Next.');
+  q.push('Reply.');
+  assert.deepEqual(engine.sent.slice(1), ['Next.']);
+  await engine.finish();
+  assert.deepEqual(engine.sent.slice(2), ['Reply.']);
+});
+
+test('after a barge-in the next reply starts with its first sentence alone', async () => {
+  const engine = fakeEngine();
+  const q = new SpeechQueue(engine.request, () => {});
+  q.push('Old reply sentence one.');
+  q.push('Old two.');
+  q.clear();
+  q.push('New.');
+  q.push('New two.');
+  await engine.finish();
+  assert.deepEqual(engine.sent, ['Old reply sentence one.', 'New.']);
 });
 
 test('a batch never exceeds the size limit', async () => {

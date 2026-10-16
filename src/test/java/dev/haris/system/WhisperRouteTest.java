@@ -7,8 +7,10 @@ import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import dev.haris.system.WhisperRoute.Device;
 import dev.haris.system.WhisperRoute.Outcome;
@@ -100,6 +102,7 @@ class WhisperRouteTest {
         final Map<Device, Deque<Outcome>> outcomes = Map.of(Device.GPU, new ArrayDeque<>(), Device.CPU, new ArrayDeque<>());
         final List<String> calls = new ArrayList<>();
         boolean upWorks = true;
+        final Set<Device> upFails = EnumSet.noneOf(Device.class);
 
         @Override
         public void started(Device device) {
@@ -114,7 +117,7 @@ class WhisperRouteTest {
         @Override
         public boolean up(Device device) {
             calls.add("up " + device);
-            return upWorks;
+            return upWorks && !upFails.contains(device);
         }
 
         @Override
@@ -175,6 +178,47 @@ class WhisperRouteTest {
         e.upWorks = false;
         assertThat(WhisperRoute.settle(Device.GPU, e)).isEqualTo(Device.CPU);
         assertThat(e.calls).containsExactly("await GPU", "up CPU");
+    }
+
+    // ── A failed GPU start is blamed on the GPU only when the CPU start then works ──
+
+    @Test
+    void aGpuThatStartsIsNotBlamed() {
+        FakeEngines e = new FakeEngines();
+        assertThat(WhisperRoute.start(Device.GPU, e, () -> false)).isEqualTo(new WhisperRoute.Start(Device.GPU, false));
+        assertThat(e.calls).containsExactly("up GPU");
+    }
+
+    @Test
+    void gpuFailsAndCpuWorksBlamesTheGpu() {
+        FakeEngines e = new FakeEngines();
+        e.upFails.add(Device.GPU);
+        assertThat(WhisperRoute.start(Device.GPU, e, () -> false)).isEqualTo(new WhisperRoute.Start(Device.CPU, true));
+        assertThat(e.calls).containsExactly("up GPU", "up CPU");
+    }
+
+    @Test
+    void gpuAndCpuBothFailingDoesNotBlameTheGpu() {
+        FakeEngines e = new FakeEngines();
+        e.upWorks = false;   // Docker gone, a port taken, or Piper broken: not the GPU's fault
+        assertThat(WhisperRoute.start(Device.GPU, e, () -> false)).isEqualTo(new WhisperRoute.Start(null, false));
+        assertThat(e.calls).containsExactly("up GPU", "up CPU");
+    }
+
+    @Test
+    void noCpuRetryOrBlameWhileHarisIsClosing() {
+        FakeEngines e = new FakeEngines();
+        e.upFails.add(Device.GPU);
+        assertThat(WhisperRoute.start(Device.GPU, e, () -> true)).isEqualTo(new WhisperRoute.Start(null, false));
+        assertThat(e.calls).containsExactly("up GPU");
+    }
+
+    @Test
+    void aFailedCpuStartHasNothingToFallBackTo() {
+        FakeEngines e = new FakeEngines();
+        e.upWorks = false;
+        assertThat(WhisperRoute.start(Device.CPU, e, () -> false)).isEqualTo(new WhisperRoute.Start(null, false));
+        assertThat(e.calls).containsExactly("up CPU");
     }
 
     // ── The GPU image is downloaded in the background, never inside the blocking start ──
@@ -298,5 +342,49 @@ class WhisperRouteTest {
         // The override merges its environment into compose.yaml's; it must not reset or replace it.
         assertThat(gpu).doesNotContain("environment: !override").doesNotContain("environment: !reset");
         assertThat(gpu).contains("\"-m\", \"wyoming_faster_whisper\"");
+    }
+
+    // ── a Compose too old for compose.gpu.yaml skips the GPU (and its download) ──
+
+    @Test
+    void composeFromTwoTwentyFourFourCanApplyTheGpuFile() {
+        assertThat(WhisperRoute.composeCanApplyGpuFile("2.24.4")).isTrue();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("v2.24.4")).isTrue();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("2.24.10")).isTrue();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("2.25.0")).isTrue();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("2.29.7-desktop.1")).isTrue();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("5.6.0\n")).isTrue();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("Docker Compose version v2.30.3")).isTrue();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("3.0.0")).isTrue();
+    }
+
+    @Test
+    void anOlderOrUnknownComposeCannot() {
+        assertThat(WhisperRoute.composeCanApplyGpuFile("2.24.3")).isFalse();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("2.23.9")).isFalse();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("2.9.40")).isFalse();   // numbers, not text: 9 < 24
+        assertThat(WhisperRoute.composeCanApplyGpuFile("v2.20.2-desktop.1")).isFalse();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("1.29.2")).isFalse();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("")).isFalse();
+        assertThat(WhisperRoute.composeCanApplyGpuFile(null)).isFalse();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("docker: 'compose' is not a docker command.")).isFalse();
+        assertThat(WhisperRoute.composeCanApplyGpuFile("99999999999.0.0")).isFalse();
+    }
+
+    @Test
+    void versionsCompareByNumber() {
+        assertThat(WhisperRoute.compareVersions(new int[] {2, 24, 4}, new int[] {2, 24, 4})).isZero();
+        assertThat(WhisperRoute.compareVersions(new int[] {2, 3, 0}, new int[] {2, 24, 4})).isNegative();
+        assertThat(WhisperRoute.compareVersions(new int[] {10, 0, 0}, new int[] {2, 24, 4})).isPositive();
+        assertThat(WhisperRoute.parseVersion("v2.29.7-desktop.1")).containsExactly(2, 29, 7);
+        assertThat(WhisperRoute.parseVersion("2.29")).isNull();
+    }
+
+    @Test
+    void theGpuFileStillUsesTheOverrideTagTheMinimumIsFor() throws Exception {
+        // If compose.gpu.yaml stops using "!override", MIN_COMPOSE may be lowered again.
+        String gpu = Files.readString(Path.of("voice", "compose.gpu.yaml"));
+        assertThat(gpu).contains("volumes: !override");
+        assertThat(WhisperRoute.MIN_COMPOSE).isEqualTo("2.24.4");
     }
 }

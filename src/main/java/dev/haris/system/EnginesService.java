@@ -55,6 +55,8 @@ public class EnginesService {
     private final ReentrantLock voiceLock = new ReentrantLock();
     /** The background download of the GPU image, if one is running. */
     private volatile Process pull;
+    /** Starts the {@code docker pull} process; a test stands in for it. */
+    ProcessStarter pullStarter = ProcessBuilder::start;
     private final AtomicBoolean pulling = new AtomicBoolean();
     /** Written when the GPU Whisper did not start, so later launches go straight to the CPU for a while. */
     private final Path gpuFailedFile = SettingsService.dataDir().resolve("whisper-gpu-failed");
@@ -110,7 +112,8 @@ public class EnginesService {
      * Piper is up as soon as this returns; whether the GPU Whisper answers is checked on a side thread,
      * which falls back to the CPU Whisper if it does not. A GPU image that is not downloaded yet never
      * holds this up: Whisper starts on the CPU and the image is pulled in the background (see
-     * {@link WhisperRoute#withImage}); a GPU that failed recently is skipped for a few days.
+     * {@link WhisperRoute#withImage}); a GPU that failed recently (at {@code up} or after it) is skipped
+     * for a few days, and a Docker Compose older than {@link WhisperRoute#MIN_COMPOSE} skips it altogether.
      */
     private void startVoice(Path file) {
         boolean allowed = WhisperRoute.gpuAllowed(gpuSwitch,
@@ -119,6 +122,17 @@ public class EnginesService {
         String gpuImage = null;
         if (device == Device.GPU && !Files.isRegularFile(gpuFile(file))) {
             device = Device.CPU;
+        }
+        if (device == Device.GPU) {
+            // Checked before the image: an old Compose cannot use it, so it is not downloaded either.
+            // Trusted only on exit 0: an error message could contain a number that reads like a version.
+            Run version = run(List.of("docker", "compose", "version", "--short"), 30_000);
+            String compose = version.exit() == 0 ? version.out().strip() : "";
+            if (!WhisperRoute.composeCanApplyGpuFile(compose)) {
+                log.info("Docker Compose {} cannot apply compose.gpu.yaml ({} or later is needed); "
+                        + "speech-to-text uses the CPU.", compose.isEmpty() ? "(no answer)" : compose, WhisperRoute.MIN_COMPOSE);
+                device = Device.CPU;
+            }
         }
         if (device == Device.GPU) {
             gpuImage = WhisperRoute.imageOf(gpuFile(file));
@@ -132,15 +146,15 @@ public class EnginesService {
         }
         log.info("Speech-to-text device: {}{}", device.label(), allowed ? "" : " (" + WhisperRoute.SWITCH + " is off)");
         WhisperRoute.Engines whisper = whisperEngines(file);
-        boolean up = whisper.up(device);
-        if (!up && device == Device.GPU && !stopping) {
-            log.warn("Could not start the voice engines with the GPU; trying the CPU.");
-            device = Device.CPU;
-            up = whisper.up(device);
+        WhisperRoute.Start start = WhisperRoute.start(device, whisper, () -> stopping);
+        if (start.gpuFailed()) {
+            // Remembered like a GPU Whisper that never answered, so later launches do not retry it every time.
+            rememberGpu(false, gpuImage);
         }
-        if (!up) {
+        if (start.device() == null) {
             return;
         }
+        device = start.device();
         synchronized (started) {
             started.add(file);
         }
@@ -212,17 +226,24 @@ public class EnginesService {
      * carries on from there at the next start. Haris switches to the GPU at the next start, not
      * mid-session, so speech-to-text is never taken away while the user may be talking.
      */
-    private void pullImage(Path file, String image) {
+    void pullImage(Path file, String image) {
         if (stopping) {
             return;
         }
         long start = System.currentTimeMillis();
         log.info("Downloading the GPU speech-to-text image {} in the background (several GB, one time)...", image);
         try {
-            Process p = new ProcessBuilder("docker", "pull", image)
+            Process p = pullStarter.start(new ProcessBuilder("docker", "pull", image)
                     .directory(file.getParent().toFile())
-                    .redirectErrorStream(true).start();
+                    .redirectErrorStream(true));
             pull = p;
+            // stop() may have run after the check above but before the process was stored, and then
+            // found nothing to end: check again, so the docker pull never outlives Haris.
+            if (stopping) {
+                p.destroy();
+                log.info("GPU image download paused because Haris is closing; it continues at the next start.");
+                return;
+            }
             WhisperRoute.PullProgress progress = new WhisperRoute.PullProgress();
             StringBuilder last = new StringBuilder();
             Thread reader = Thread.ofVirtual().start(() -> {
@@ -493,6 +514,12 @@ public class EnginesService {
         cmd.addAll(List.of(args));
         Run r = run(cmd, 30_000);
         return r.exit() < 0 ? "" : r.out();
+    }
+
+    /** Starts a process from a builder ({@link ProcessBuilder#start} outside tests). */
+    @FunctionalInterface
+    interface ProcessStarter {
+        Process start(ProcessBuilder builder) throws IOException;
     }
 
     /** A finished command: its exit code (-1 if it could not run or timed out) and its output. */

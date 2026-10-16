@@ -10,12 +10,13 @@ import { api, hasToken, streamChat, subscribeEvents } from './api.js';
 import { createEmblem } from './emblem.js';
 import { mountDrawers } from './drawers.js';
 import { mountChatPanel } from './chatPanel.js';
-import { applyLanguage, brandFor, getLanguage, locale, speakerFor, t } from './i18n.js';
+import { applyLanguage, brandFor, getLanguage, locale, messageHeaderFor, relabelMessages, t } from './i18n.js';
 import { composeStatusReport, firstNameOf, waitForEngines } from './statusReport.js';
 import { briefingQuietMs, deliverBriefing } from './briefing.js';
 import { sameRules } from './settingsDiff.js';
 import { SentenceSplitter, Voice } from './voice.js';
 import { takePhoto } from './camera.js';
+import { setBidiText } from './bidi.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -137,30 +138,34 @@ window.addEventListener('keyup', (e) => {
 async function refreshVoiceStatus() {
   try {
     const s = await api('/api/voice/status');
+    // Statuses mix Arabic with engine names: each Latin run is isolated so RTL keeps the order.
+    const show = (id, text) => setBidiText($(id), text);
     const mark = (id, ok) => {
-      $(id).textContent = ok ? t('voice.online') : t('voice.offline');
+      show(id, ok ? t('voice.online') : t('voice.offline'));
       $(id).classList.toggle('off', !ok);
     };
     if (s.sttRoute === 'colab') {
-      $('voice-stt').textContent = s.stt ? t('voice.colabBackup') : t('voice.colab');
+      show('voice-stt', s.stt ? t('voice.colabBackup') : t('voice.colab'));
       $('voice-stt').classList.remove('off');
     } else {
       mark('voice-stt', s.stt);
-      if (s.stt && s.sttDevice === 'gpu') $('voice-stt').textContent = t('voice.onlineGpu');
+      if (s.stt && s.sttDevice === 'gpu') show('voice-stt', t('voice.onlineGpu'));
     }
     if (s.ttsRoute === 'gemini') {
-      $('voice-tts').textContent = s.tts ? t('voice.geminiBackup') : t('voice.gemini');
+      show('voice-tts', s.tts ? t('voice.geminiBackup') : t('voice.gemini'));
       $('voice-tts').classList.remove('off');
     } else if (s.ttsRoute === 'gemini-paused') {
       // Google's limit was reached (often the free daily quota): Piper speaks until it resets.
       const time = new Date(s.ttsResumeAt).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
-      $('voice-tts').textContent = t('voice.geminiPaused', { time });
+      show('voice-tts', t('voice.geminiPaused', { time }));
       $('voice-tts').classList.toggle('off', !s.tts);
     } else {
       mark('voice-tts', s.tts);
     }
     mark('voice-wake', s.wake && s.wakeWords.includes('hey_haris'));
-    if (s.wake && !s.wakeWords.includes('hey_haris')) $('voice-wake').textContent = t('voice.noWakeModel');
+    if (s.wake && !s.wakeWords.includes('hey_haris')) show('voice-wake', t('voice.noWakeModel'));
+    // A long status wraps to two lines; the tooltip always has all of it.
+    for (const id of ['voice-stt', 'voice-tts', 'voice-wake']) $(id).title = $(id).textContent;
   } catch {
     /* ignore */
   }
@@ -345,8 +350,8 @@ function addMessage(role, text = '') {
   const el = document.createElement('article');
   el.className = `msg ${role}`;
   const who = document.createElement('header');
-  who.textContent = { user: t('who.you'), error: t('who.system'), notice: t('who.system'), reminder: t('who.reminder') }[role]
-    ?? speakerFor(assistantName);
+  who.dataset.role = role;   // so a language switch can re-label it (relabelMessages)
+  who.textContent = messageHeaderFor(role, assistantName);
   const body = document.createElement('div');
   body.className = 'body';
   body.dir = 'auto';
@@ -637,6 +642,7 @@ function applyIdentity(s) {
 function applyUi(s) {
   applyLanguage(s.uiLanguage === 'ar' ? 'ar' : 'en');
   applyIdentity(s);
+  relabelMessages(transcript, assistantName);   // headers only; what was said stays as it was
   setState(document.body.dataset.state || 'idle');
   tickClock();
   setContext(externalNow);

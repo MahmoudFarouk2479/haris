@@ -9,6 +9,7 @@ import java.time.format.DateTimeParseException;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -126,6 +127,33 @@ final class WhisperRoute {
         return fallBack(engines);
     }
 
+    /**
+     * How {@link #start} went: the device the voice engines run on ({@code null} when they did not
+     * start), and whether the GPU should be remembered as failed.
+     */
+    record Start(Device device, boolean gpuFailed) {
+    }
+
+    /**
+     * {@code up} on {@code device}; when that is the GPU and it fails, {@code up} on the CPU instead.
+     * The GPU is blamed only when the CPU start then works: {@code up} starts the whole voice project
+     * (Piper too), so when both fail the fault is Docker, a port, or Piper, not the GPU, and a healthy
+     * GPU must not be skipped for days because of it.
+     */
+    static Start start(Device device, Engines engines, BooleanSupplier stopping) {
+        if (engines.up(device)) {
+            return new Start(device, false);
+        }
+        if (device != Device.GPU || stopping.getAsBoolean()) {
+            return new Start(null, false);
+        }
+        log.warn("Could not start the voice engines with the GPU; trying the CPU.");
+        if (!engines.up(Device.CPU)) {
+            return new Start(null, false);
+        }
+        return new Start(Device.CPU, !stopping.getAsBoolean());
+    }
+
     /** Starts the CPU Whisper in place of the GPU one (same project, so it replaces the container). */
     static Device fallBack(Engines engines) {
         if (engines.up(Device.CPU)) {
@@ -214,6 +242,51 @@ final class WhisperRoute {
             return State.UNKNOWN;
         }
         return s.equals("running") || s.equals("created") || s.equals("restarting") ? State.UP : State.GONE;
+    }
+
+    /**
+     * The oldest Docker Compose that can apply compose.gpu.yaml: it replaces the CPU model volume with
+     * {@code volumes: !override [...]}, a merge tag Compose understands from 2.24.4. An older Compose
+     * cannot start the GPU Whisper as written (it would keep both volumes on /data), so the GPU path,
+     * and the several-GB image download for it, are skipped there.
+     */
+    static final String MIN_COMPOSE = "2.24.4";
+
+    private static final Pattern VERSION = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)");
+
+    /**
+     * True when {@code docker compose version --short} (for example "2.29.7-desktop.1", "v2.24.4" or
+     * "5.6.0") names a Compose at least {@link #MIN_COMPOSE}. No answer, or none that reads as a version, is false.
+     */
+    static boolean composeCanApplyGpuFile(String version) {
+        int[] have = parseVersion(version);
+        return have != null && compareVersions(have, parseVersion(MIN_COMPOSE)) >= 0;
+    }
+
+    /** The first "major.minor.patch" in the text, or null. */
+    static int[] parseVersion(String text) {
+        if (text == null) {
+            return null;
+        }
+        Matcher m = VERSION.matcher(text);
+        if (!m.find()) {
+            return null;
+        }
+        try {
+            return new int[] {Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)), Integer.parseInt(m.group(3))};
+        } catch (NumberFormatException e) {
+            return null;   // a part too long to be a version number
+        }
+    }
+
+    /** Negative, zero or positive as version {@code a} is older than, the same as, or newer than {@code b}. */
+    static int compareVersions(int[] a, int[] b) {
+        for (int i = 0; i < 3; i++) {
+            if (a[i] != b[i]) {
+                return Integer.compare(a[i], b[i]);
+            }
+        }
+        return 0;
     }
 
     /** After the GPU failed, Haris starts on the CPU for this many days (or until the GPU image changes). */

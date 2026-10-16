@@ -10,18 +10,13 @@
 //   * the HUD shows a live indicator whenever the microphone is open.
 import { postBinary, postForAudio, sessionToken } from './api.js';
 import { SpeechQueue } from './speechQueue.js';
+import { buildSpeechOutput } from './speechOutput.js';
 
 const SPEECH_RMS = 0.025;        // above this a frame counts as speech
 const END_SILENCE_MS = 600;      // this much quiet after speech ends a recording
 const NO_SPEECH_MS = 5000;       // give up if nobody speaks
 const MAX_RECORD_MS = 15000;
 const FRAME_MS = 80;
-/**
- * Speech is played a little below full scale (0.8 = about -2 dB). The synthesised voice peaks at
- * 0 dBFS, and the browser's resampling to the output rate then clips some peaks. Volume only:
- * the audio is not resampled or stretched, so the speed of speech does not change.
- */
-export const SPEECH_GAIN = 0.8;
 
 export class Voice {
   constructor({ onLevel, onWake, onMicState, onSpeaking, onNeedsGesture, onSpeechError }) {
@@ -237,11 +232,8 @@ export class Voice {
     const analyser = this.out.createAnalyser();
     analyser.fftSize = 512;
     src.buffer = buffer;
-    // The meter reads the voice before the gain, so the emblem reacts exactly as before.
-    if (!this.gain) {
-      this.gain = new GainNode(this.out, { gain: SPEECH_GAIN });
-      this.gain.connect(this.out.destination);
-    }
+    // The meter reads the voice before the gain and the limiter, so the emblem reacts exactly as before.
+    this.gain ??= buildSpeechOutput(this.out);
     src.connect(analyser);
     analyser.connect(this.gain);
     const data = new Uint8Array(analyser.fftSize);

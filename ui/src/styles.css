@@ -260,6 +260,20 @@ html[lang='ar'] .rows dt { letter-spacing: 0; text-transform: none; font-size: 0
 .rows dd { margin: 0; font-weight: 600; text-align: end; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 62%; }
 .voice-rows dd, .rows.secure dd { color: #7dffcf; }
 .voice-rows dd.off { color: var(--ink-dim); }
+/* Voice statuses can be long ("● Piper (Gemini limit, back 02:59)"): they wrap to two lines instead of
+   being cut off, and the full text is also in the tooltip. The label keeps its line at the top. */
+.voice-rows div { align-items: baseline; }
+.voice-rows dt { flex: none; }
+.voice-rows dd {
+  max-width: 70%;
+  white-space: normal;
+  overflow-wrap: break-word;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
 .rows.secure dd.warn { color: var(--gold); }
 
 .activity { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; font-size: 0.85rem; }

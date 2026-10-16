@@ -54,9 +54,20 @@ test('voice mode hides the transcript from sight only, so its aria-live replies 
 
 test('speech plays with a little headroom (volume only, never faster or slower)', () => {
   const voiceJs = readFileSync(new URL('./voice.js', import.meta.url), 'utf8');
-  const gain = Number(voiceJs.match(/export const SPEECH_GAIN = ([\d.]+);/)?.[1]);
+  const outputJs = readFileSync(new URL('./speechOutput.js', import.meta.url), 'utf8');
+  const gain = Number(outputJs.match(/export const SPEECH_GAIN = ([\d.]+);/)?.[1]);
   assert.ok(gain >= 0.7 && gain <= 0.9, `SPEECH_GAIN ${gain}`);
+  assert.match(voiceJs, /this\.gain \?\?= buildSpeechOutput\(this\.out\)/);
   assert.match(voiceJs, /analyser\.connect\(this\.gain\)/);
+  assert.doesNotMatch(outputJs, /playbackRate|detune/);
   assert.doesNotMatch(voiceJs, /analyser\.connect\(this\.out\.destination\)/);
   assert.doesNotMatch(voiceJs, /playbackRate|detune/);
+});
+
+test('long voice statuses wrap to two lines with the full text in a tooltip, not an ellipsis', () => {
+  const css = readFileSync(new URL('./styles.css', import.meta.url), 'utf8');
+  const rule = css.match(/\.voice-rows dd \{([^}]*)\}/)?.[1] ?? '';
+  assert.match(rule, /white-space: normal/);
+  assert.match(rule, /-webkit-line-clamp: 2/);
+  assert.match(main, /\$\(id\)\.title = \$\(id\)\.textContent/);
 });

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { STRINGS, applyLanguage, brandFor, setLanguage, speakerFor, t } from './i18n.js';
+import { STRINGS, applyLanguage, brandFor, messageHeaderFor, relabelMessages, setLanguage, speakerFor, t } from './i18n.js';
 
 const HUD_STATES = ['idle', 'thinking', 'speaking', 'acting', 'waiting', 'error', 'listening', 'transcribing'];
 
@@ -110,4 +110,44 @@ test('every key main.js passes to setLabel exists', () => {
   for (const [, args] of calls) {
     for (const [, key] of args.matchAll(/'([^']+)'/g)) assert.ok(STRINGS.en[key], `main.js uses missing key ${key}`);
   }
+});
+
+test('message headers follow the interface language; the bodies do not change', () => {
+  setLanguage('en');
+  const roles = ['user', 'assistant', 'notice', 'error', 'reminder'];
+  const messages = roles.map((role) => {
+    const header = fakeElement({ 'data-role': role });
+    header.textContent = messageHeaderFor(role, 'Haris');
+    return { header, body: { textContent: `said by ${role}: hello / مرحبا` } };
+  });
+  assert.deepEqual(messages.map((m) => m.header.textContent),
+    [STRINGS.en['who.you'], STRINGS.en['brand.short'].toUpperCase(), STRINGS.en['who.system'], STRINGS.en['who.system'], STRINGS.en['who.reminder']]);
+  const transcript = {
+    querySelectorAll(selector) {
+      assert.equal(selector, 'header[data-role]');
+      return messages.map((m) => m.header);
+    },
+  };
+
+  setLanguage('ar');
+  relabelMessages(transcript, 'Haris');
+  assert.deepEqual(messages.map((m) => m.header.textContent),
+    [STRINGS.ar['who.you'], STRINGS.ar['brand.short'].toUpperCase(), STRINGS.ar['who.system'], STRINGS.ar['who.system'], STRINGS.ar['who.reminder']]);
+  messages.forEach((m, i) => assert.equal(m.body.textContent, `said by ${roles[i]}: hello / مرحبا`));
+
+  setLanguage('en');
+  relabelMessages(transcript, 'Friday');
+  assert.equal(messages[0].header.textContent, 'YOU');
+  assert.equal(messages[1].header.textContent, 'FRIDAY');
+});
+
+test('main.js tags each message header with its role and re-labels them on a language switch', () => {
+  const js = readFileSync(new URL('./main.js', import.meta.url), 'utf8');
+  assert.match(js, /who\.dataset\.role = role;/);
+  // The whole body of applyUi (up to its closing brace at the start of a line), so a block with
+  // braces inside it does not hide the call.
+  const start = js.indexOf('function applyUi(s) {');
+  assert.ok(start >= 0);
+  const body = js.slice(start, start + js.slice(start).search(/\n\}/));
+  assert.match(body, /relabelMessages\(transcript, assistantName\)/);
 });
