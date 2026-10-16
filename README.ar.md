@@ -93,6 +93,7 @@
 | YouTube | [@mahmoudfaroukabdelhamid](https://www.youtube.com/@mahmoudfaroukabdelhamid) |
 | LinkedIn | [mahmoud-farouk-abdelhamid](https://www.linkedin.com/in/mahmoud-farouk-abdelhamid) |
 | X | [@Mahmoud44145036](https://x.com/Mahmoud44145036) |
+| Gumroad (منتجاتي التانية، زي Arab Enterprise Kit) | [mahmoudfarouk28.gumroad.com](https://mahmoudfarouk28.gumroad.com/) |
 
 ## الرخصة
 

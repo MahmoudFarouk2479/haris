@@ -224,6 +224,7 @@ Mahmoud Farouk, from Cairo, Egypt, has 8+ years of experience in software engine
 | YouTube | [@mahmoudfaroukabdelhamid](https://www.youtube.com/@mahmoudfaroukabdelhamid) |
 | LinkedIn | [mahmoud-farouk-abdelhamid](https://www.linkedin.com/in/mahmoud-farouk-abdelhamid) |
 | X | [@Mahmoud44145036](https://x.com/Mahmoud44145036) |
+| Gumroad (my other products, e.g. Arab Enterprise Kit) | [mahmoudfarouk28.gumroad.com](https://mahmoudfarouk28.gumroad.com/) |
 
 ## License
 
