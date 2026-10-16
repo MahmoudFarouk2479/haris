@@ -92,12 +92,20 @@ public class HudWindow {
             return false;
         }
         List<HWND> windows = visibleWindows(owner);
+        // Minimised windows are restored (a maximised one stays so) and focused last, so when the profile
+        // also has another window open, the one the user minimised is the one that ends up in front.
+        List<HWND> restored = new ArrayList<>();
         for (HWND w : windows) {
             WinUser.WINDOWPLACEMENT placement = new WinUser.WINDOWPLACEMENT();
             if (User32.INSTANCE.GetWindowPlacement(w, placement).booleanValue()
                     && placement.showCmd == SW_SHOWMINIMIZED) {
-                User32.INSTANCE.ShowWindow(w, SW_RESTORE);   // only when minimised: a maximised window stays so
+                User32.INSTANCE.ShowWindow(w, SW_RESTORE);
+                restored.add(w);
+            } else {
+                User32.INSTANCE.SetForegroundWindow(w);
             }
+        }
+        for (HWND w : restored) {
             User32.INSTANCE.SetForegroundWindow(w);
         }
         return !windows.isEmpty();
