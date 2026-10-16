@@ -79,6 +79,12 @@ test('first name: every Latin title is skipped with or without its dot', () => {
   assert.equal(firstNameOf('Ms.. Sara'), 'Ms..');                    // one dot only
 });
 
+test('first name: an undotted title is a title only before another word; alone it is the name', () => {
+  for (const name of ['Eng', 'Ms', 'Dr', 'Mr', 'Prof', 'ENG']) assert.equal(firstNameOf(name), name);
+  assert.equal(firstNameOf('  Eng  '), 'Eng');
+  assert.equal(firstNameOf('Eng Ahmed'), 'Ahmed');
+});
+
 test('weather codes map to the nine condition groups', () => {
   const cases = {
     0: 'clear', 1: 'partly', 2: 'partly', 3: 'overcast', 45: 'fog', 48: 'fog',

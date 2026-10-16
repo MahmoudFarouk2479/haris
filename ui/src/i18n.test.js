@@ -144,5 +144,10 @@ test('message headers follow the interface language; the bodies do not change', 
 test('main.js tags each message header with its role and re-labels them on a language switch', () => {
   const js = readFileSync(new URL('./main.js', import.meta.url), 'utf8');
   assert.match(js, /who\.dataset\.role = role;/);
-  assert.match(js, /function applyUi\(s\) \{[^}]*relabelMessages\(transcript, assistantName\)/);
+  // The whole body of applyUi (up to its closing brace at the start of a line), so a block with
+  // braces inside it does not hide the call.
+  const start = js.indexOf('function applyUi(s) {');
+  assert.ok(start >= 0);
+  const body = js.slice(start, start + js.slice(start).search(/\n\}/));
+  assert.match(body, /relabelMessages\(transcript, assistantName\)/);
 });
