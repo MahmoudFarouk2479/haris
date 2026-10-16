@@ -284,7 +284,7 @@
           </select>
         </label>
         <label><span data-i18n="settings.geminiKey">Google AI Studio key</span> <input name="geminiKey" type="password" autocomplete="off" dir="ltr" data-i18n-placeholder="settings.keepPh" placeholder="leave empty to keep" /></label>
-        <p class="hint" id="gemini-key-state"></p>
+        <div class="key-state"><p class="hint" id="gemini-key-state"></p><button type="button" class="btn ghost danger" id="gemini-key-remove" data-i18n="settings.removeKey" hidden>Remove</button></div>
         <label><span data-i18n="settings.piperEnglish">Piper English voice</span> <input name="voiceEnglish" dir="ltr" placeholder="en_GB-alan-medium" /></label>
         <label><span data-i18n="settings.piperArabic">Piper Arabic voice</span> <input name="voiceArabic" dir="ltr" placeholder="ar_JO-kareem-medium" /></label>
         <button type="button" class="btn ghost" id="test-speaker" data-i18n="settings.testSpeaker">▶ Test speaker</button>
@@ -318,7 +318,7 @@
           <label><span data-i18n="settings.colabUrl">Colab address</span> <input name="colabBaseUrl" dir="ltr" placeholder="https://….ngrok-free.dev  or  https://….trycloudflare.com" /></label>
           <label><span data-i18n="settings.model">Model</span> <input name="colabModel" dir="ltr" list="model-list" placeholder="e.g. qwen2.5:7b" /></label>
           <label><span data-i18n="settings.colabToken">Access token</span> <input name="colabKey" type="password" autocomplete="off" dir="ltr" data-i18n-placeholder="settings.keepPh" placeholder="leave empty to keep" /></label>
-          <p class="hint" id="colab-key-state"></p>
+          <div class="key-state"><p class="hint" id="colab-key-state"></p><button type="button" class="btn ghost danger" id="colab-key-remove" data-i18n="settings.removeKey" hidden>Remove</button></div>
           <label class="check"><input type="checkbox" name="colabStt" /> <span data-i18n="settings.colabStt">Also recognise speech on Colab's GPU (faster; needs the notebook's access token — falls back to this PC)</span></label>
         </div>
 
@@ -334,7 +334,7 @@
             </select>
           </label>
           <label><span data-i18n="settings.apiKey">API key</span> <input name="anthropicKey" type="password" autocomplete="off" dir="ltr" data-i18n-placeholder="settings.anthropicKeyPh" placeholder="sk-ant-…  (leave empty to keep)" /></label>
-          <p class="hint" id="anthropic-key-state"></p>
+          <div class="key-state"><p class="hint" id="anthropic-key-state"></p><button type="button" class="btn ghost danger" id="anthropic-key-remove" data-i18n="settings.removeKey" hidden>Remove</button></div>
           <label class="check"><input type="checkbox" name="webSearch" /> <span data-i18n="settings.webSearch">Allow Claude to search the web (results are treated as untrusted)</span></label>
         </div>
 
@@ -342,7 +342,7 @@
           <label><span data-i18n="settings.baseUrl">Base URL</span> <input name="openAiBaseUrl" dir="ltr" placeholder="https://api.openai.com" /></label>
           <label><span data-i18n="settings.model">Model</span> <input name="openAiModel" dir="ltr" list="model-list" /></label>
           <label><span data-i18n="settings.apiKey">API key</span> <input name="openAiKey" type="password" autocomplete="off" dir="ltr" data-i18n-placeholder="settings.keepPh" placeholder="leave empty to keep" /></label>
-          <p class="hint" id="openai-key-state"></p>
+          <div class="key-state"><p class="hint" id="openai-key-state"></p><button type="button" class="btn ghost danger" id="openai-key-remove" data-i18n="settings.removeKey" hidden>Remove</button></div>
         </div>
 
         <datalist id="model-list"></datalist>

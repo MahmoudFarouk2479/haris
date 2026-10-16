@@ -14,6 +14,7 @@ import { applyLanguage, brandFor, errorText, getLanguage, locale, messageHeaderF
 import { composeStatusReport, firstNameOf, waitForEngines } from './statusReport.js';
 import { briefingQuietMs, deliverBriefing } from './briefing.js';
 import { sameRules } from './settingsDiff.js';
+import { KEY_SLOTS, removeKey } from './secretKeys.js';
 import { SentenceSplitter, Voice } from './voice.js';
 import { takePhoto } from './camera.js';
 import { setBidiText } from './bidi.js';
@@ -623,12 +624,31 @@ function fillSettings(view) {
 
 /** Texts that depend on saved keys; rewritten whenever the language changes. */
 function renderKeyStates() {
-  const v = secretsCache;
-  $('anthropic-key-state').textContent = v.anthropic ? t('settings.keyStored') : t('settings.keyMissing');
-  $('openai-key-state').textContent = v['openai-compatible'] ? t('settings.keyStored') : t('settings.keyMissing');
-  $('gemini-key-state').textContent = v.gemini ? t('settings.geminiKeySaved') : t('settings.geminiKeyMissing');
-  $('colab-key-state').textContent = v.colab ? t('settings.colabTokenSaved') : t('settings.colabTokenMissing');
-  $('colab-key-state').classList.toggle('warn-text', !v.colab);
+  for (const slot of KEY_SLOTS) {
+    const stored = Boolean(secretsCache[slot.name]);
+    const hint = document.getElementById(slot.state);
+    hint.textContent = t(stored ? slot.saved : slot.missing);
+    if (slot.warnWhenMissing) hint.classList.toggle('warn-text', !stored);
+    const remove = document.getElementById(slot.remove);
+    remove.hidden = !stored;
+    remove.title = t('settings.removeKeyTitle', { key: t(`settings.keyName.${slot.name}`) });
+    remove.setAttribute('aria-label', remove.title);
+  }
+}
+
+for (const slot of KEY_SLOTS) {
+  document.getElementById(slot.remove).addEventListener('click', async () => {
+    $('settings-error').textContent = '';
+    try {
+      const view = await removeKey(slot.name, { confirm: (q) => window.confirm(q), api, t });
+      if (!view) return;
+      secretsCache = view.secrets;
+      engineReady = view.engineReady;
+      renderKeyStates();
+    } catch (e) {
+      $('settings-error').textContent = e.message;
+    }
+  });
 }
 
 function applyIdentity(s) {

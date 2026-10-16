@@ -561,6 +561,10 @@ select option { background: #06110f; }
 .provider-fields[hidden] { display: none; }
 .hint { margin: 0; font-size: 0.82rem; color: var(--ink-dim); }
 .hint.warn-text { color: var(--gold); }
+.key-state { display: flex; align-items: center; gap: 0.6rem; }
+.key-state .hint { flex: 1; }
+.key-state .btn { flex: none; padding: 0.25rem 0.6rem; }
+.key-state .btn[hidden] { display: none; }
 .form-error { margin: 0; min-height: 1em; color: var(--danger); font-weight: 600; }
 .settings footer { display: flex; justify-content: flex-end; }
 .memory-inner { padding: 1.2rem 1.3rem; display: flex; flex-direction: column; gap: 0.75rem; }
