@@ -56,8 +56,11 @@
 2. أغلق حارس وشغّله مرة أخرى. حارس ينتظر Docker نحو دقيقتين عند التشغيل، ولا يشغّل المحركات بعد ذلك من تلقاء
    نفسه.
 
-قد تقترح رسالة خطأ البحث أن تشغّل `docker compose -f search/compose.yaml up -d` بنفسك. هذا الأمر يحتاج سر SearXNG
-الذي يمرره حارس من Credential Manager، لذلك إعادة تشغيل حارس هي الطريقة المضمونة.
+عند فشل البحث في الويب تقول الرسالة *"The local search engine is not running. Start Docker Desktop and wait
+until it says it is running, then close Haris and start it again: Haris starts web search itself."*
+(محرك البحث المحلي لا يعمل: شغّل Docker Desktop وانتظر حتى يعمل، ثم أغلق حارس وشغّله مرة أخرى، فهو يشغّل البحث بنفسه).
+لا تشغّل SearXNG بأمر `docker compose` يدوياً: فهو يحتاج سراً يحفظه حارس في Credential Manager ويمرره فقط
+لأمر `docker compose` الخاص به، لذلك يفشل الأمر المكتوب يدوياً.
 
 ## محركات الصوت تبقى متوقفة
 

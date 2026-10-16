@@ -56,9 +56,10 @@ running: voice and web search are off until it is started."*
 2. Close Haris and start it again. Haris waits about two minutes for Docker at launch; it does not
    start the engines later on its own.
 
-A web search error may suggest running `docker compose -f search/compose.yaml up -d` yourself. That
-command needs SearXNG's secret, which Haris passes from Credential Manager, so restarting Haris is
-the reliable way.
+A failed web search says *"The local search engine is not running. Start Docker Desktop and wait
+until it says it is running, then close Haris and start it again: Haris starts web search itself."*
+Do not start SearXNG with `docker compose` by hand: it needs a secret that Haris keeps in Credential
+Manager and passes only to its own `docker compose` call, so the hand-typed command fails.
 
 ## Voice engines stay offline
 
