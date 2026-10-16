@@ -47,10 +47,10 @@ security and privacy, troubleshooting, FAQ, and building from source.
 | 🧠 **Any model** | Claude (official SDK, tool use, vision), local Ollama / LM Studio, OpenAI-compatible clouds, or Ollama on Colab behind a token-checking proxy. |
 | 🛠 **25 tools** | Apps, files, clipboard, reminders, weather, media keys, lock / sleep / restart, message drafts, system status, web, vision, memory. |
 | 🎙 **Voice** | "Hey Haris" wake word, push-to-talk, Arabic and English speech, spoken replies sentence by sentence, barge-in, conversation mode. |
-| 👁 **Vision** | One screenshot or one webcam photo, on request, previewed before you approve it. |
+| 👁 **Vision** | One screenshot or one webcam photo, on request. A screenshot is previewed before you approve it; a webcam photo is taken only after you approve, then shown in the conversation. |
 | 🔎 **Private web search** | A local SearXNG instance; pages reduced to text with hidden elements removed. |
 | 🔐 **Encrypted memory** | Facts you approve, AES-256-GCM, key in Windows Credential Manager. |
-| 🌅 **Daily briefing** | Date, weather, reminders and headlines on the first launch of the day. |
+| 🌅 **Status report & briefing** | On the first launch of the day: a spoken status report (system, engines, weather) with no model call, then an optional briefing with the date, reminders and headlines. |
 | 📦 **Installer** | Self-contained app (its own Java runtime), per-user install, no admin rights. |
 
 ## Quick start
@@ -62,7 +62,7 @@ for speech-to-text, spoken replies and web search.
 
 1. Download `Haris-<version>-windows.zip` from *Releases* and unzip it.
 2. Right-click `install.ps1` → *Run with PowerShell* (per user, no admin).
-3. Start **Haris** from the Start menu, open **⚙ Configure** and choose an engine.
+3. Start **Haris** from the Start menu, open the gear labelled **Settings** and choose an engine.
 
 `uninstall.ps1` removes the app; `uninstall.ps1 -RemoveData` also erases settings, memory, stored
 keys and engine data.
@@ -83,7 +83,7 @@ Both download the wake-word model once (`models/fetch-models.ps1`, SHA-256 check
 | Engine | Setup | Where your conversation goes |
 |---|---|---|
 | **Claude** | Paste an API key from [console.anthropic.com](https://console.anthropic.com). Default `claude-opus-5-5`; *Low* effort is snappiest for voice. | Anthropic |
-| **Ollama / LM Studio** | Install, pull a tool-capable model (e.g. `qwen2.5:7b`), pick it in Configure. | Stays on your PC |
+| **Ollama / LM Studio** | Install, pull a tool-capable model (e.g. `qwen2.5:7b`), pick it in Settings. | Stays on your PC |
 | **OpenAI-compatible** | Base URL (HTTPS) + API key. | That provider |
 | **Ollama on Colab** | See below. | Your Colab session (Google) |
 
@@ -94,7 +94,7 @@ Both download the wake-word model once (`models/fetch-models.ps1`, SHA-256 check
 2. *(Once)* In Colab's 🔑 **Secrets**, add `NGROK_AUTHTOKEN` (free ngrok account) and optionally
    `NGROK_DOMAIN` (your free static domain) — then the address stays the same every session.
    Without them the notebook uses a Cloudflare quick tunnel.
-3. *Run all*. Paste the printed **address** and **access token** into Configure → *Ollama on Google
+3. *Run all*. Paste the printed **address** and **access token** into Settings → *Ollama on Google
    Colab*. Save the token as the `HARIS_TOKEN` secret to keep it across sessions.
 
 The notebook keeps models on your Google Drive (no re-download next session) and also runs
@@ -137,7 +137,9 @@ Found a hole? See [SECURITY.md](SECURITY.md).
 | Conversation text | never | sent to that provider |
 | Spoken replies | never (Piper speaks on this PC) | the reply text goes to Google only if you choose the Gemini voice |
 | Screenshots / photos | never | sent, only after you approve each picture |
-| Web searches | to search engines, via local SearXNG (no cookies or accounts) | same |
+| Files read by tools (`read_file`, `list_folder`, `search_files`; no click needed) | never | the results are sent to that provider |
+| Web searches | to search engines, via local SearXNG (no cookies or accounts) | same; with *Allow Claude to search the web* on, Claude can also search through Anthropic |
+| Weather | the home-city name goes to Open-Meteo | same |
 | Settings, memory, logs | stay in `~/.haris` | stay in `~/.haris` |
 
 Conversations are kept in memory only and vanish when Haris closes.
