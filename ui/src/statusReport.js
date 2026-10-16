@@ -20,17 +20,26 @@ export function weatherKey(code) {
 }
 
 // Names that are two words, written apart: «عبد الرحمن», «أبو بكر», "Abdel Rahman", "El Sayed".
-// Calling someone «يا عبد» or "Abdel" alone is wrong (and in Egyptian Arabic, rude).
-const COMPOUND_FIRST = new Set(['عبد', 'أبو', 'ابو', 'abd', 'abdel', 'abdal', 'abdul', 'abdol', 'abu', 'abou', 'el', 'al']);
-// The article written as a word of its own: «عبد ال رحمن», "Abd El Rahman".
+// Calling someone «يا عبد» or "Abdel" alone is wrong (and in Egyptian Arabic, rude). The prefixes
+// are عبد / أبو and Abd / Abdel / Abdul / Abu / El (with their common spellings). "Al" is not one:
+// "Al Smith" is Al.
+const COMPOUND_FIRST = new Set(['عبد', 'أبو', 'ابو', 'abd', 'abdel', 'abdal', 'abdul', 'abdol', 'abu', 'abou', 'el']);
+// The article written as a word of its own after one of those: «عبد ال رحمن», "Abd El Rahman", "Abd Al Rahman".
 const ARTICLE = new Set(['ال', 'el', 'al']);
-// Titles some people put before their name; the greeting uses the name itself.
-const TITLES = new Set(['dr.', 'dr', 'eng.', 'eng', 'prof.', 'mr.', 'mrs.', 'ms.', 'د.', 'م.', 'أ.', 'أ.د.']);
+// Titles some people put before their name; the greeting uses the name itself. Latin titles match with
+// or without their dot ("Dr" and "Dr."); the Arabic abbreviations are written with theirs.
+const LATIN_TITLES = new Set(['mr', 'mrs', 'ms', 'dr', 'prof', 'eng']);
+const ARABIC_TITLES = new Set(['د.', 'م.', 'أ.', 'أ.د.']);
+
+function isTitle(word) {
+  const w = word.toLowerCase();
+  return ARABIC_TITLES.has(w) || LATIN_TITLES.has(w.endsWith('.') ? w.slice(0, -1) : w);
+}
 
 /** The name to address the user by: the first name, kept whole when it is a compound one ('' when there is none). */
 export function firstNameOf(userName) {
   let words = String(userName ?? '').trim().split(/\s+/u).filter(Boolean);
-  if (words.length > 1 && TITLES.has(words[0].toLowerCase())) words = words.slice(1);
+  if (words.length > 1 && isTitle(words[0])) words = words.slice(1);
   if (words.length < 2 || !COMPOUND_FIRST.has(words[0].toLowerCase())) return words[0] ?? '';
   const take = ARTICLE.has(words[1].toLowerCase()) && words.length > 2 ? 3 : 2;
   return words.slice(0, take).join(' ');
