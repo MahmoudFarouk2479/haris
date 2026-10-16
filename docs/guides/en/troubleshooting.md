@@ -162,7 +162,7 @@ You can always type a model name into **Model** yourself.
 | *"This model does not support tools, so I can only talk…"* | Pick a tool-capable model ([Engines](engines.md#choosing-a-model)). |
 | *"Still working on the previous message."* | One request at a time; wait for the reply. |
 | *"The core is not responding."* | The core stopped. Close the window and start Haris again. |
-| *"Something went wrong in the core. See the console log."* | Look in `~\.haris\logs\haris.log` (the installed app has no console). |
+| *"Something went wrong in the core. Details are in the log: %USERPROFILE%\\.haris\\logs\\haris.log"* | An unexpected error in the core. Open that file (paste the path into File Explorer); the last lines name the error. The same path is shown at the bottom of Settings. |
 | *"I stopped after 12 steps to stay on the safe side. Ask me to continue if needed."* | A request needed many tool steps. Say "continue". |
 | *"This conversation got very long, so I started a fresh one."* | Automatic after a very long conversation. |
 

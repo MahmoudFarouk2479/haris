@@ -10,7 +10,7 @@ import { api, hasToken, streamChat, subscribeEvents } from './api.js';
 import { createEmblem } from './emblem.js';
 import { mountDrawers } from './drawers.js';
 import { mountChatPanel } from './chatPanel.js';
-import { applyLanguage, brandFor, getLanguage, locale, messageHeaderFor, relabelMessages, t } from './i18n.js';
+import { applyLanguage, brandFor, errorText, getLanguage, locale, messageHeaderFor, relabelMessages, t } from './i18n.js';
 import { composeStatusReport, firstNameOf, waitForEngines } from './statusReport.js';
 import { briefingQuietMs, deliverBriefing } from './briefing.js';
 import { sameRules } from './settingsDiff.js';
@@ -483,9 +483,9 @@ async function send(text, { label } = {}) {
       renderThroughput();
       setState(voice.speaking ? 'speaking' : 'idle');
     },
-    error: ({ message }) => {
+    error: (data) => {
       closeBubble();
-      addMessage('error', message);
+      addMessage('error', errorText(data));
       setState('error');
       setTimeout(() => setState('idle'), 2500);
     },

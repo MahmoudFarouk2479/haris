@@ -132,6 +132,7 @@
 | كل الإعدادات السابقة عدا المفاتيح | `~\.haris\settings.json` |
 | مفتاح Anthropic، ومفتاح المحرك المتوافق مع OpenAI، ورمز Colab، ومفتاح جوجل | ‏Credential Manager، في إدخالات باسم `Haris\|anthropic` و`Haris\|openai-compatible` و`Haris\|colab` و`Haris\|gemini` |
 | اللوحة المثبّتة، وإخفاء عمود المحادثة | ملف تعريف المتصفح الخاص بالواجهة (`~\.haris\hud-profile`) |
+| سجل البرنامج (ليس إعداداً) | `%USERPROFILE%\.haris\logs\haris.log`؛ أسفل نافذة الإعدادات يعرض هذا المسار |
 
 لا يوجد في النافذة زر لحذف مفتاح محفوظ؛ يمكنك استبداله، أو حذف إدخاله من Credential Manager
 (**Control Panel → Credential Manager → Windows Credentials**). لا تحذف `Haris|memory-key`: بدونه لا يمكن فك

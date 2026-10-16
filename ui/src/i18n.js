@@ -97,6 +97,7 @@ export const STRINGS = {
     'msg.noToken': 'This window has no session token. Start Haris from its launcher so it can open its own window.',
     'msg.cameraFailed': 'The camera photo could not be taken.',
     'msg.noModels': 'No models found. Is the engine running?',
+    'error.core': 'Something went wrong in the core. Details are in the log: %USERPROFILE%\\.haris\\logs\\haris.log',
     'greet.setup': "Hello, I'm {name}. Choose an engine in Settings and we can begin.",
     'greet.morning': 'Good morning{who}. All systems are online.',
     'greet.afternoon': 'Good afternoon{who}. All systems are online.',
@@ -238,6 +239,7 @@ export const STRINGS = {
     'settings.baseUrl': 'Base URL',
     'settings.detect': 'Save & detect models',
     'settings.keysHint': 'Keys are written to Windows Credential Manager and can never be read back by this window.',
+    'settings.logHint': 'App log (start-up, engines and errors; never conversation text or keys): %USERPROFILE%\\.haris\\logs\\haris.log',
     'settings.save': 'Save',
     'memory.title': 'Memory',
     'memory.hint': 'Everything Haris remembers about you, encrypted on this computer (AES-256, key in Windows Credential Manager). Each fact was approved by you. Delete anything at any time.',
@@ -338,6 +340,7 @@ export const STRINGS = {
     'msg.noToken': 'هذه النافذة بلا رمز جلسة. شغّل حارس من اختصاره ليفتح نافذته الخاصة.',
     'msg.cameraFailed': 'تعذّر التقاط صورة الكاميرا.',
     'msg.noModels': 'لم يتم العثور على نماذج. هل المحرك يعمل؟',
+    'error.core': 'حدث خطأ في النواة. التفاصيل في ملف السجل: %USERPROFILE%\\.haris\\logs\\haris.log',
     'greet.setup': 'أهلاً، أنا {name}. اختر محركًا من الإعدادات ونبدأ.',
     'greet.morning': 'صباح الخير{who}. كل الأنظمة تعمل.',
     'greet.afternoon': 'مساء الخير{who}. كل الأنظمة تعمل.',
@@ -479,6 +482,7 @@ export const STRINGS = {
     'settings.baseUrl': 'العنوان الأساسي',
     'settings.detect': 'حفظ واكتشاف النماذج',
     'settings.keysHint': 'المفاتيح تُكتب في خزنة ويندوز ولا يمكن لهذه النافذة قراءتها مرة أخرى.',
+    'settings.logHint': 'سجل البرنامج (التشغيل والمحركات والأخطاء، وأبداً نص المحادثة أو المفاتيح): %USERPROFILE%\\.haris\\logs\\haris.log',
     'settings.save': 'حفظ',
     'memory.title': 'الذاكرة',
     'memory.hint': 'كل ما يتذكره حارس عنك، مشفّر على هذا الجهاز (AES-256، والمفتاح في خزنة ويندوز). كل معلومة وافقت عليها أنت. احذف أي شيء في أي وقت.',
@@ -505,6 +509,11 @@ export function getLanguage() {
 export function t(key, vars = {}) {
   const raw = STRINGS[current]?.[key] ?? STRINGS.en[key] ?? key;
   return raw.replace(/\{(\w+)\}/g, (match, name) => (name in vars ? String(vars[name]) : match));
+}
+
+/** An error from the core in the HUD's language when it carries a known code, else its own message. */
+export function errorText({ message, code } = {}) {
+  return code && STRINGS.en[`error.${code}`] ? t(`error.${code}`) : message;
 }
 
 /** Locale for dates and times shown in the HUD. */

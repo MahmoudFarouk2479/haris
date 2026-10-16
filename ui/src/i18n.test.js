@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { STRINGS, applyLanguage, brandFor, messageHeaderFor, relabelMessages, setLanguage, speakerFor, t } from './i18n.js';
+import { STRINGS, applyLanguage, brandFor, errorText, messageHeaderFor, relabelMessages, setLanguage, speakerFor, t } from './i18n.js';
 
 const HUD_STATES = ['idle', 'thinking', 'speaking', 'acting', 'waiting', 'error', 'listening', 'transcribing'];
 
@@ -150,4 +150,20 @@ test('main.js tags each message header with its role and re-labels them on a lan
   assert.ok(start >= 0);
   const body = js.slice(start, start + js.slice(start).search(/\n\}/));
   assert.match(body, /relabelMessages\(transcript, assistantName\)/);
+});
+
+test('a core error with a known code is shown in the HUD language and points to the real log file', () => {
+  setLanguage('ar');
+  assert.equal(errorText({ code: 'core', message: 'english' }), STRINGS.ar['error.core']);
+  setLanguage('en');
+  assert.equal(errorText({ code: 'core', message: 'english' }), STRINGS.en['error.core']);
+  assert.equal(errorText({ message: 'Claude rate limit reached.' }), 'Claude rate limit reached.');
+  assert.equal(errorText({ code: 'unknown', message: 'as sent' }), 'as sent');
+  for (const lang of ['en', 'ar']) {
+    for (const key of ['error.core', 'settings.logHint']) {
+      assert.ok(STRINGS[lang][key].includes('%USERPROFILE%\\.haris\\logs\\haris.log'), `${lang}.${key}`);
+    }
+  }
+  const all = JSON.stringify(STRINGS);
+  assert.doesNotMatch(all, /console log/i, 'the installed app has no console');
 });
