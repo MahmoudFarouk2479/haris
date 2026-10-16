@@ -16,6 +16,7 @@ import { briefingQuietMs, deliverBriefing } from './briefing.js';
 import { sameRules } from './settingsDiff.js';
 import { SentenceSplitter, Voice } from './voice.js';
 import { takePhoto } from './camera.js';
+import { setBidiText } from './bidi.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -137,30 +138,32 @@ window.addEventListener('keyup', (e) => {
 async function refreshVoiceStatus() {
   try {
     const s = await api('/api/voice/status');
+    // Statuses mix Arabic with engine names: each Latin run is isolated so RTL keeps the order.
+    const show = (id, text) => setBidiText($(id), text);
     const mark = (id, ok) => {
-      $(id).textContent = ok ? t('voice.online') : t('voice.offline');
+      show(id, ok ? t('voice.online') : t('voice.offline'));
       $(id).classList.toggle('off', !ok);
     };
     if (s.sttRoute === 'colab') {
-      $('voice-stt').textContent = s.stt ? t('voice.colabBackup') : t('voice.colab');
+      show('voice-stt', s.stt ? t('voice.colabBackup') : t('voice.colab'));
       $('voice-stt').classList.remove('off');
     } else {
       mark('voice-stt', s.stt);
-      if (s.stt && s.sttDevice === 'gpu') $('voice-stt').textContent = t('voice.onlineGpu');
+      if (s.stt && s.sttDevice === 'gpu') show('voice-stt', t('voice.onlineGpu'));
     }
     if (s.ttsRoute === 'gemini') {
-      $('voice-tts').textContent = s.tts ? t('voice.geminiBackup') : t('voice.gemini');
+      show('voice-tts', s.tts ? t('voice.geminiBackup') : t('voice.gemini'));
       $('voice-tts').classList.remove('off');
     } else if (s.ttsRoute === 'gemini-paused') {
       // Google's limit was reached (often the free daily quota): Piper speaks until it resets.
       const time = new Date(s.ttsResumeAt).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
-      $('voice-tts').textContent = t('voice.geminiPaused', { time });
+      show('voice-tts', t('voice.geminiPaused', { time }));
       $('voice-tts').classList.toggle('off', !s.tts);
     } else {
       mark('voice-tts', s.tts);
     }
     mark('voice-wake', s.wake && s.wakeWords.includes('hey_haris'));
-    if (s.wake && !s.wakeWords.includes('hey_haris')) $('voice-wake').textContent = t('voice.noWakeModel');
+    if (s.wake && !s.wakeWords.includes('hey_haris')) show('voice-wake', t('voice.noWakeModel'));
     // A long status wraps to two lines; the tooltip always has all of it.
     for (const id of ['voice-stt', 'voice-tts', 'voice-wake']) $(id).title = $(id).textContent;
   } catch {
