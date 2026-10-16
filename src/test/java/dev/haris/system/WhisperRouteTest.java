@@ -7,8 +7,10 @@ import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import dev.haris.system.WhisperRoute.Device;
 import dev.haris.system.WhisperRoute.Outcome;
@@ -100,6 +102,7 @@ class WhisperRouteTest {
         final Map<Device, Deque<Outcome>> outcomes = Map.of(Device.GPU, new ArrayDeque<>(), Device.CPU, new ArrayDeque<>());
         final List<String> calls = new ArrayList<>();
         boolean upWorks = true;
+        final Set<Device> upFails = EnumSet.noneOf(Device.class);
 
         @Override
         public void started(Device device) {
@@ -114,7 +117,7 @@ class WhisperRouteTest {
         @Override
         public boolean up(Device device) {
             calls.add("up " + device);
-            return upWorks;
+            return upWorks && !upFails.contains(device);
         }
 
         @Override
@@ -175,6 +178,47 @@ class WhisperRouteTest {
         e.upWorks = false;
         assertThat(WhisperRoute.settle(Device.GPU, e)).isEqualTo(Device.CPU);
         assertThat(e.calls).containsExactly("await GPU", "up CPU");
+    }
+
+    // ── A failed GPU start is blamed on the GPU only when the CPU start then works ──
+
+    @Test
+    void aGpuThatStartsIsNotBlamed() {
+        FakeEngines e = new FakeEngines();
+        assertThat(WhisperRoute.start(Device.GPU, e, () -> false)).isEqualTo(new WhisperRoute.Start(Device.GPU, false));
+        assertThat(e.calls).containsExactly("up GPU");
+    }
+
+    @Test
+    void gpuFailsAndCpuWorksBlamesTheGpu() {
+        FakeEngines e = new FakeEngines();
+        e.upFails.add(Device.GPU);
+        assertThat(WhisperRoute.start(Device.GPU, e, () -> false)).isEqualTo(new WhisperRoute.Start(Device.CPU, true));
+        assertThat(e.calls).containsExactly("up GPU", "up CPU");
+    }
+
+    @Test
+    void gpuAndCpuBothFailingDoesNotBlameTheGpu() {
+        FakeEngines e = new FakeEngines();
+        e.upWorks = false;   // Docker gone, a port taken, or Piper broken: not the GPU's fault
+        assertThat(WhisperRoute.start(Device.GPU, e, () -> false)).isEqualTo(new WhisperRoute.Start(null, false));
+        assertThat(e.calls).containsExactly("up GPU", "up CPU");
+    }
+
+    @Test
+    void noCpuRetryOrBlameWhileHarisIsClosing() {
+        FakeEngines e = new FakeEngines();
+        e.upFails.add(Device.GPU);
+        assertThat(WhisperRoute.start(Device.GPU, e, () -> true)).isEqualTo(new WhisperRoute.Start(null, false));
+        assertThat(e.calls).containsExactly("up GPU");
+    }
+
+    @Test
+    void aFailedCpuStartHasNothingToFallBackTo() {
+        FakeEngines e = new FakeEngines();
+        e.upWorks = false;
+        assertThat(WhisperRoute.start(Device.CPU, e, () -> false)).isEqualTo(new WhisperRoute.Start(null, false));
+        assertThat(e.calls).containsExactly("up CPU");
     }
 
     // ── The GPU image is downloaded in the background, never inside the blocking start ──

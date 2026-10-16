@@ -9,6 +9,7 @@ import java.time.format.DateTimeParseException;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -124,6 +125,33 @@ final class WhisperRoute {
         }
         log.warn("Speech-to-text did not start on the GPU; using the CPU instead.");
         return fallBack(engines);
+    }
+
+    /**
+     * How {@link #start} went: the device the voice engines run on ({@code null} when they did not
+     * start), and whether the GPU should be remembered as failed.
+     */
+    record Start(Device device, boolean gpuFailed) {
+    }
+
+    /**
+     * {@code up} on {@code device}; when that is the GPU and it fails, {@code up} on the CPU instead.
+     * The GPU is blamed only when the CPU start then works: {@code up} starts the whole voice project
+     * (Piper too), so when both fail the fault is Docker, a port, or Piper, not the GPU, and a healthy
+     * GPU must not be skipped for days because of it.
+     */
+    static Start start(Device device, Engines engines, BooleanSupplier stopping) {
+        if (engines.up(device)) {
+            return new Start(device, false);
+        }
+        if (device != Device.GPU || stopping.getAsBoolean()) {
+            return new Start(null, false);
+        }
+        log.warn("Could not start the voice engines with the GPU; trying the CPU.");
+        if (!engines.up(Device.CPU)) {
+            return new Start(null, false);
+        }
+        return new Start(Device.CPU, !stopping.getAsBoolean());
     }
 
     /** Starts the CPU Whisper in place of the GPU one (same project, so it replaces the container). */

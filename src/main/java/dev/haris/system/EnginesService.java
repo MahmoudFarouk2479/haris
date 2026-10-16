@@ -125,7 +125,9 @@ public class EnginesService {
         }
         if (device == Device.GPU) {
             // Checked before the image: an old Compose cannot use it, so it is not downloaded either.
-            String compose = docker("compose", "version", "--short").strip();
+            // Trusted only on exit 0: an error message could contain a number that reads like a version.
+            Run version = run(List.of("docker", "compose", "version", "--short"), 30_000);
+            String compose = version.exit() == 0 ? version.out().strip() : "";
             if (!WhisperRoute.composeCanApplyGpuFile(compose)) {
                 log.info("Docker Compose {} cannot apply compose.gpu.yaml ({} or later is needed); "
                         + "speech-to-text uses the CPU.", compose.isEmpty() ? "(no answer)" : compose, WhisperRoute.MIN_COMPOSE);
@@ -144,17 +146,15 @@ public class EnginesService {
         }
         log.info("Speech-to-text device: {}{}", device.label(), allowed ? "" : " (" + WhisperRoute.SWITCH + " is off)");
         WhisperRoute.Engines whisper = whisperEngines(file);
-        boolean up = whisper.up(device);
-        if (!up && device == Device.GPU && !stopping) {
-            log.warn("Could not start the voice engines with the GPU; trying the CPU.");
+        WhisperRoute.Start start = WhisperRoute.start(device, whisper, () -> stopping);
+        if (start.gpuFailed()) {
             // Remembered like a GPU Whisper that never answered, so later launches do not retry it every time.
             rememberGpu(false, gpuImage);
-            device = Device.CPU;
-            up = whisper.up(device);
         }
-        if (!up) {
+        if (start.device() == null) {
             return;
         }
+        device = start.device();
         synchronized (started) {
             started.add(file);
         }
