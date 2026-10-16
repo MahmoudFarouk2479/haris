@@ -71,7 +71,7 @@ Manager and passes only to its own `docker compose` call, so the hand-typed comm
 | Symptom | Cause and fix |
 |---|---|
 | **○ Offline** for several minutes after the very first start | Docker is downloading the images and the speech model. Wait; `docker ps` shows the containers once they run. |
-| *"The speech-to-text engine is not running. Start it with: docker compose -f voice/compose.yaml up -d"* | Whisper did not answer. Check the Voice drawer and the log for *"docker compose up -d failed for …"*. Restarting Haris usually helps. |
+| *"The speech-to-text engine is not running. Start Docker Desktop and wait until it says it is running, then close Haris and start it again: Haris starts its voice engines itself."* | Whisper did not answer. Check the Voice drawer and the log for *"docker compose up -d failed for …"*. Restarting Haris usually helps; it picks the right compose files (GPU or CPU) itself, so do not start the voice containers by hand. |
 | Whisper keeps exiting after you closed Haris during its first model download | Haris detects the half-written model (*"Unable to open file 'model.bin'"*), removes the volume and downloads again by itself, once. If it still fails, close Haris and run `docker volume rm haris-voice_whisper-data`, then start Haris. |
 | `WHISPER_OFFLINE=true` and a new `WHISPER_MODEL` | Offline mode forbids downloading the new model. Set `WHISPER_OFFLINE=false` for one start. |
 | *"Still working on the previous recording. Say it again in a moment."* | Haris transcribes one recording at a time. Wait for the first one. |

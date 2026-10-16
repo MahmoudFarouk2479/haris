@@ -37,6 +37,9 @@ public class VoiceController {
     private static final int MAX_RAW_SPEAK_CHARS = MAX_SPEAK_CHARS * 4;
     /** Docker can take most of a minute to bring the engines up after Haris starts. */
     private static final Duration STARTUP_WAIT = Duration.ofSeconds(90);
+    /** No docker command: Haris starts the engines itself (with the right files) when Docker answers. */
+    static final String STT_NOT_RUNNING = "The speech-to-text engine is not running. Start Docker Desktop and wait "
+            + "until it says it is running, then close Haris and start it again: Haris starts its voice engines itself.";
     private static final Pattern ARABIC = Pattern.compile("[\\u0600-\\u06FF]");
     private static final Pattern SPEAKABLE = Pattern.compile("[\\p{L}\\p{N}]");
 
@@ -154,7 +157,7 @@ public class VoiceController {
         } catch (IOException e) {
             log.warn("Speech-to-text failed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .body(Map.of("error", "The speech-to-text engine is not running. Start it with: docker compose -f voice/compose.yaml up -d"));
+                    .body(Map.of("error", STT_NOT_RUNNING));
         }
     }
 

@@ -70,7 +70,7 @@ until it says it is running, then close Haris and start it again: Haris starts w
 | العَرَض | السبب والحل |
 |---|---|
 | **○ متوقف** لعدة دقائق بعد أول تشغيل على الإطلاق | ‏Docker ينزّل الصور ونموذج الكلام. انتظر؛ والأمر `docker ps` يعرض الحاويات عندما تعمل. |
-| *"The speech-to-text engine is not running. Start it with: docker compose -f voice/compose.yaml up -d"* | ‏Whisper لم يرد. راجع لوحة الصوت، وابحث في السجل عن *"docker compose up -d failed for …"*. إعادة تشغيل حارس تحل المشكلة عادة. |
+| *"The speech-to-text engine is not running. Start Docker Desktop and wait until it says it is running, then close Haris and start it again: Haris starts its voice engines itself."* | ‏Whisper لم يرد. راجع لوحة الصوت، وابحث في السجل عن *"docker compose up -d failed for …"*. إعادة تشغيل حارس تحل المشكلة عادة؛ فهو يختار ملفات compose المناسبة (GPU أو CPU) بنفسه، فلا تشغّل حاويات الصوت يدوياً. |
 | ‏Whisper يتوقف باستمرار بعد أن أغلقت حارس أثناء تنزيل النموذج لأول مرة | يكتشف حارس النموذج نصف المكتوب (*"Unable to open file 'model.bin'"*)، فيحذف المجلد وينزّل من جديد تلقائياً، مرة واحدة. إذا استمرت المشكلة، أغلق حارس وشغّل `docker volume rm haris-voice_whisper-data`، ثم شغّل حارس. |
 | ‏`WHISPER_OFFLINE=true` مع `WHISPER_MODEL` جديد | الوضع غير المتصل يمنع تنزيل النموذج الجديد. اجعل `WHISPER_OFFLINE=false` لتشغيل واحد. |
 | *"Still working on the previous recording. Say it again in a moment."* | حارس يحوّل تسجيلاً واحداً في كل مرة. انتظر الأول. |
