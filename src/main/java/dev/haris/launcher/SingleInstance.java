@@ -32,10 +32,17 @@ public final class SingleInstance {
     /** The lock this process holds, kept reachable so it is never released before exit. */
     private static volatile SingleInstance current;
 
-    /** Brings the window(s) of a browser process to the front; true if there was one. */
+    /**
+     * Brings the running HUD window to the front; true if there was one. Gets the browser process the
+     * running Haris started (its id and start time), which may since have handed the window to another.
+     */
     @FunctionalInterface
     public interface Activator {
-        boolean bringToFront(long pid);
+        boolean bringToFront(long pid, long startMillis);
+    }
+
+    /** What the running Haris noted about its window: the browser process it started. */
+    record WindowRef(long pid, long startMillis) {
     }
 
     private final Path dir;
@@ -70,8 +77,9 @@ public final class SingleInstance {
                     return Optional.empty();
                 }
             } else {
-                long pid = windowPid(state);
-                if (pid > 0 && activator.bringToFront(pid)) {
+                WindowRef window = windowRef(state);
+                // No window noted yet: Haris is still starting; keep asking until it opens one.
+                if (window != null && activator.bringToFront(window.pid(), window.startMillis())) {
                     note(dir, "Haris is already running; this second launch brought its window to the front and exited.");
                     return Optional.empty();
                 }
@@ -99,7 +107,7 @@ public final class SingleInstance {
                 channel.close();
                 return Optional.empty();
             }
-            Files.deleteIfExists(dir.resolve(STATE_FILE));   // from a run that ended (or crashed) earlier
+            forgetState(dir);   // from a run that ended (or crashed) earlier
             return Optional.of(new SingleInstance(dir, channel, lock));
         } catch (OverlappingFileLockException e) {
             channel.close();   // held by this same JVM (tests)
@@ -110,11 +118,27 @@ public final class SingleInstance {
         }
     }
 
-    /** The HUD window opened in this browser process (only recorded by the Haris that holds the lock). */
-    public static void windowOpened(long pid) {
+    /** Best effort: a state file that cannot be removed must never cost this launch its lock. */
+    private static void forgetState(Path dir) {
+        try {
+            Files.deleteIfExists(dir.resolve(STATE_FILE));
+        } catch (IOException | RuntimeException e) {
+            try {
+                Files.writeString(dir.resolve(STATE_FILE), "", StandardCharsets.US_ASCII);
+            } catch (IOException | RuntimeException ignored) {
+                // a second launch then finds no window it can trust and gives up on its own
+            }
+        }
+    }
+
+    /**
+     * The HUD window was opened by this browser process (only recorded by the Haris that holds the
+     * lock). Its start time is kept too, so a process number reused by another program never counts.
+     */
+    public static void windowOpened(long pid, long startMillis) {
         SingleInstance me = current;
         if (me != null) {
-            me.writeState(WINDOW + pid);
+            me.writeState(WINDOW + pid + " " + startMillis);
         }
     }
 
@@ -151,14 +175,19 @@ public final class SingleInstance {
         }
     }
 
-    static long windowPid(String state) {
+    /** {@code window <pid> <startMillis>}, or null for anything else. */
+    static WindowRef windowRef(String state) {
         if (state == null || !state.startsWith(WINDOW)) {
-            return -1;
+            return null;
+        }
+        String[] parts = state.substring(WINDOW.length()).strip().split(" ");
+        if (parts.length != 2) {
+            return null;
         }
         try {
-            return Long.parseLong(state.substring(WINDOW.length()).strip());
+            return new WindowRef(Long.parseLong(parts[0]), Long.parseLong(parts[1]));
         } catch (NumberFormatException e) {
-            return -1;
+            return null;
         }
     }
 

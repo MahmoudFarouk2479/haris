@@ -25,7 +25,7 @@ class SingleInstanceTest {
     Path dir;
 
     private final List<SingleInstance> held = new ArrayList<>();
-    private final List<Long> activated = new ArrayList<>();
+    private final List<String> activated = new ArrayList<>();
 
     @AfterEach
     void releaseAll() throws IOException {
@@ -35,8 +35,8 @@ class SingleInstanceTest {
     }
 
     private Optional<SingleInstance> claim(Duration windowWait, Duration closeWait) throws IOException {
-        Optional<SingleInstance> got = SingleInstance.claim(dir, pid -> {
-            activated.add(pid);
+        Optional<SingleInstance> got = SingleInstance.claim(dir, (pid, start) -> {
+            activated.add(pid + "@" + start);
             return true;
         }, windowWait, closeWait);
         got.ifPresent(held::add);
@@ -52,10 +52,10 @@ class SingleInstanceTest {
     @Test
     void aSecondLaunchBringsTheRunningWindowForwardAndDoesNotRun() throws IOException {
         assertThat(claim(Duration.ZERO, Duration.ZERO)).isPresent();
-        SingleInstance.windowOpened(4242);
+        SingleInstance.windowOpened(4242, 1_700_000_000_123L);
 
         assertThat(claim(Duration.ofSeconds(5), Duration.ZERO)).isEmpty();
-        assertThat(activated).containsExactly(4242L);
+        assertThat(activated).containsExactly("4242@1700000000123");
         assertThat(Files.readString(dir.resolve("logs/haris.log"))).contains("already running");
     }
 
@@ -74,7 +74,7 @@ class SingleInstanceTest {
     @Test
     void aLaunchDuringShutdownWaitsForItAndThenRuns() throws Exception {
         SingleInstance first = claim(Duration.ZERO, Duration.ZERO).orElseThrow();
-        SingleInstance.windowOpened(77);
+        SingleInstance.windowOpened(77, 1);
         SingleInstance.closing();
         held.remove(first);
         Thread exit = Thread.ofPlatform().start(() -> {
@@ -124,11 +124,36 @@ class SingleInstanceTest {
     }
 
     @Test
-    void windowPidsAreParsedStrictly() {
-        assertThat(SingleInstance.windowPid("window 1234")).isEqualTo(1234);
-        assertThat(SingleInstance.windowPid("closing")).isEqualTo(-1);
-        assertThat(SingleInstance.windowPid("window x")).isEqualTo(-1);
-        assertThat(SingleInstance.windowPid("")).isEqualTo(-1);
+    void windowNotesAreParsedStrictly() {
+        assertThat(SingleInstance.windowRef("window 1234 99")).isEqualTo(new SingleInstance.WindowRef(1234, 99));
+        assertThat(SingleInstance.windowRef("window 1234")).as("no start time: not trusted").isNull();
+        assertThat(SingleInstance.windowRef("closing")).isNull();
+        assertThat(SingleInstance.windowRef("window x 1")).isNull();
+        assertThat(SingleInstance.windowRef("")).isNull();
+    }
+
+    @Test
+    void aStateFileThatCannotBeRemovedNeverCostsTheLock() throws IOException {
+        Path stuck = dir.resolve(SingleInstance.STATE_FILE);
+        Files.createDirectories(stuck);
+        Files.writeString(stuck.resolve("x"), "a directory that is not empty cannot be deleted");
+
+        Optional<SingleInstance> got = SingleInstance.tryAcquire(dir);
+        got.ifPresent(held::add);
+
+        assertThat(got).isPresent();
+    }
+
+    @Test
+    void aSecondLaunchWhileTheWindowIsMomentarilyNotFoundKeepsTrying() throws IOException {
+        assertThat(claim(Duration.ZERO, Duration.ZERO)).isPresent();
+        SingleInstance.windowOpened(5, 6);
+        int[] asks = {0};
+
+        Optional<SingleInstance> second = SingleInstance.claim(dir, (pid, start) -> ++asks[0] >= 3, Duration.ofSeconds(10), Duration.ZERO);
+
+        assertThat(second).isEmpty();
+        assertThat(asks[0]).isEqualTo(3);
     }
 
     /** Starts a JVM that takes the lock in {@link #dir} and then waits; returns once it holds it. */

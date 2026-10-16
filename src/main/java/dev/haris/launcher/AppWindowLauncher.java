@@ -9,7 +9,6 @@ import java.util.Optional;
 
 import dev.haris.agent.EventHub;
 import dev.haris.security.SessionToken;
-import dev.haris.settings.SettingsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -63,7 +62,7 @@ public class AppWindowLauncher {
         List<String> cmd = new ArrayList<>(List.of(
                 browser.get().toString(),
                 "--app=" + url,
-                "--user-data-dir=" + SettingsService.dataDir().resolve("hud-profile"),
+                "--user-data-dir=" + HudWindow.profile(),
                 "--no-first-run",
                 "--no-default-browser-check",
                 "--disable-extensions",
@@ -77,7 +76,10 @@ public class AppWindowLauncher {
             Process process = new ProcessBuilder(cmd).redirectErrorStream(true)
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
             hudWindow.setProcess(process);
-            SingleInstance.windowOpened(process.pid());   // a second launch brings this window forward
+            // A second launch brings this window forward (it finds the browser by its profile; this
+            // process is only a fallback, as it may hand the window to an Edge already running it).
+            SingleInstance.windowOpened(process.pid(),
+                    process.info().startInstant().map(java.time.Instant::toEpochMilli).orElse(0L));
             log.info("Haris HUD opened on 127.0.0.1:{}", token.port());
             // Not process.onExit(): when an Edge process for this profile already exists, the one we
             // start hands the window over and exits at once. Shutdown follows the HUD's own
