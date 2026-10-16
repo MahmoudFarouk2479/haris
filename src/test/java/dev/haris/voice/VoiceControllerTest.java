@@ -100,6 +100,16 @@ class VoiceControllerTest {
     }
 
     @Test
+    void aStoppedSpeechEngineSuggestsRestartingHarisNotADockerCommand() throws Exception {
+        VoiceEngines engines = mock(VoiceEngines.class);
+        when(engines.transcribe(any(), any())).thenThrow(new java.io.IOException("connection refused"));
+        var reply = transcribing(engines).transcribe(tone(1.0, 0.3));
+        assertThat(reply.getStatusCode().value()).isEqualTo(503);
+        assertThat(reply.getBody()).containsEntry("error", VoiceController.STT_NOT_RUNNING);
+        assertThat(VoiceController.STT_NOT_RUNNING).doesNotContain("docker compose");
+    }
+
+    @Test
     void speechIsTranscribed() throws Exception {
         VoiceEngines engines = mock(VoiceEngines.class);
         when(engines.transcribe(any(), any())).thenReturn("hello");

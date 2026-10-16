@@ -30,6 +30,9 @@ public class SearchClient {
             .followRedirects(HttpClient.Redirect.NEVER)
             .build();
 
+    static final String NOT_RUNNING = "The local search engine is not running. Start Docker Desktop and wait until it "
+            + "says it is running, then close Haris and start it again: Haris starts web search itself.";
+
     private final JsonMapper json;
     private final int port;
 
@@ -47,7 +50,9 @@ public class SearchClient {
             res = HTTP.send(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(15)).GET().build(),
                     HttpResponse.BodyHandlers.ofString());
         } catch (IOException e) {
-            throw new IOException("The local search engine is not running. Start it with: docker compose -f search/compose.yaml up -d");
+            // No docker command here: SearXNG needs the secret Haris keeps in the OS vault, so a
+            // hand-typed "docker compose up" fails. Haris starts search itself when Docker answers.
+            throw new IOException(NOT_RUNNING);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IOException("Interrupted.");

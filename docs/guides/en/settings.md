@@ -133,9 +133,15 @@ engine does not answer you see *"No models found. Is the engine running?"* or th
 | All settings above except keys | `~\.haris\settings.json` |
 | Anthropic key, OpenAI-compatible key, Colab token, Google key | Windows Credential Manager, entries named `Haris\|anthropic`, `Haris\|openai-compatible`, `Haris\|colab`, `Haris\|gemini` |
 | Pinned drawer, hidden conversation column | The HUD's own browser profile (`~\.haris\hud-profile`) |
+| The app log (not a setting) | `%USERPROFILE%\.haris\logs\haris.log`; the bottom of the Settings dialog shows this path |
 
-The window has no button to delete a stored key; you can replace it, or remove its entry in
-Windows Credential Manager (**Control Panel → Credential Manager → Windows Credentials**). Do not
-remove `Haris|memory-key`: without it your saved memory can no longer be decrypted.
+To delete a stored key, click **Remove** / **إزالة** next to its hint (*"● Key stored in vault"* and
+the like; the button shows only while a key is stored) and confirm the prompt *"Remove the saved …
+from Windows Credential Manager? Haris cannot use it until you enter it again."* The hint then
+changes to the "no key" text at once. This works for the Claude key, the OpenAI-compatible key, the
+Colab token and the Google key, and nothing else: Haris's internal secrets cannot be removed from the
+window. You can also remove an entry in Windows Credential Manager (**Control Panel → Credential
+Manager → Windows Credentials**). Do not remove `Haris|memory-key`: without it your saved memory can
+no longer be decrypted.
 
 To go back to the defaults, see [Troubleshooting](troubleshooting.md#reset-settings).

@@ -67,7 +67,9 @@ public class ChatController {
                 send(emitter, "error", Map.of("message", e.getMessage()));
             } catch (RuntimeException e) {
                 log.error("Chat failed", e);
-                send(emitter, "error", Map.of("message", "Something went wrong in the core. See the console log."));
+                // The installed app has no console: point to the log file (the HUD shows this in its own language).
+                send(emitter, "error", Map.of("code", "core", "message",
+                        "Something went wrong in the core. Details are in the log: %USERPROFILE%\\.haris\\logs\\haris.log"));
             } finally {
                 busy.set(false);
                 emitter.complete();

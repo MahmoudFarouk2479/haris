@@ -212,7 +212,8 @@ The voice containers read optional settings from `voice/.env`. Start from
 
 Restart Haris after editing. Two cautions:
 
-- Upgrading Haris replaces the program folder, including `voice\.env`. Keep a copy, or set the
+- Upgrading Haris replaces the program folder but keeps your `voice\.env` (the installer saves it
+  and puts it back). Uninstalling removes it with the program folder. You can also set the
   variables as Windows user environment variables instead (Docker Compose reads those too, and
   they take precedence over `.env`).
 - Changing `WHISPER_MODEL` downloads the new model on the next start, unless `WHISPER_OFFLINE=true`.

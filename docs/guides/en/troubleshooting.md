@@ -42,8 +42,13 @@ Haris picks a random free port between 41000 and 59000 once and stores it in `~\
 the browser remembers the microphone permission. If that port is taken by another program at
 launch, Haris picks a new one and the browser asks for the microphone again; that is expected.
 
-Haris does not prevent a second copy from starting. If you start it twice, the second core gets
-another port and its own window. Close both and start Haris once.
+Only one Haris runs at a time. Starting it again while it runs brings the existing window to the
+front (restored if it was minimised) instead of starting a second core; the log says *"Haris is
+already running; this second launch brought its window to the front and exited."* If Windows does
+not let it take the focus, its taskbar button flashes instead. If you start Haris while it is still
+shutting down (in the 20 seconds after you closed the window, or while it stops its engines), the new
+launch waits for that to finish and then opens a fresh window. After a crash nothing is left behind
+that could block the next start.
 
 ## Docker is not running
 
@@ -56,16 +61,17 @@ running: voice and web search are off until it is started."*
 2. Close Haris and start it again. Haris waits about two minutes for Docker at launch; it does not
    start the engines later on its own.
 
-A web search error may suggest running `docker compose -f search/compose.yaml up -d` yourself. That
-command needs SearXNG's secret, which Haris passes from Credential Manager, so restarting Haris is
-the reliable way.
+A failed web search says *"The local search engine is not running. Start Docker Desktop and wait
+until it says it is running, then close Haris and start it again: Haris starts web search itself."*
+Do not start SearXNG with `docker compose` by hand: it needs a secret that Haris keeps in Credential
+Manager and passes only to its own `docker compose` call, so the hand-typed command fails.
 
 ## Voice engines stay offline
 
 | Symptom | Cause and fix |
 |---|---|
 | **○ Offline** for several minutes after the very first start | Docker is downloading the images and the speech model. Wait; `docker ps` shows the containers once they run. |
-| *"The speech-to-text engine is not running. Start it with: docker compose -f voice/compose.yaml up -d"* | Whisper did not answer. Check the Voice drawer and the log for *"docker compose up -d failed for …"*. Restarting Haris usually helps. |
+| *"The speech-to-text engine is not running. Start Docker Desktop and wait until it says it is running, then close Haris and start it again: Haris starts its voice engines itself."* | Whisper did not answer. Check the Voice drawer and the log for *"docker compose up -d failed for …"*. Restarting Haris usually helps; it picks the right compose files (GPU or CPU) itself, so do not start the voice containers by hand. |
 | Whisper keeps exiting after you closed Haris during its first model download | Haris detects the half-written model (*"Unable to open file 'model.bin'"*), removes the volume and downloads again by itself, once. If it still fails, close Haris and run `docker volume rm haris-voice_whisper-data`, then start Haris. |
 | `WHISPER_OFFLINE=true` and a new `WHISPER_MODEL` | Offline mode forbids downloading the new model. Set `WHISPER_OFFLINE=false` for one start. |
 | *"Still working on the previous recording. Say it again in a moment."* | Haris transcribes one recording at a time. Wait for the first one. |
@@ -162,7 +168,7 @@ You can always type a model name into **Model** yourself.
 | *"This model does not support tools, so I can only talk…"* | Pick a tool-capable model ([Engines](engines.md#choosing-a-model)). |
 | *"Still working on the previous message."* | One request at a time; wait for the reply. |
 | *"The core is not responding."* | The core stopped. Close the window and start Haris again. |
-| *"Something went wrong in the core. See the console log."* | Look in `~\.haris\logs\haris.log` (the installed app has no console). |
+| *"Something went wrong in the core. Details are in the log: %USERPROFILE%\\.haris\\logs\\haris.log"* | An unexpected error in the core. Open that file (paste the path into File Explorer); the last lines name the error. The same path is shown at the bottom of Settings. |
 | *"I stopped after 12 steps to stay on the safe side. Ask me to continue if needed."* | A request needed many tool steps. Say "continue". |
 | *"This conversation got very long, so I started a fresh one."* | Automatic after a very long conversation. |
 

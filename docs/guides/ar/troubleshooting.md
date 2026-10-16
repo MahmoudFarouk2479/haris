@@ -43,8 +43,11 @@
 الميكروفون. إذا كان هذا المنفذ مشغولاً ببرنامج آخر عند التشغيل، يختار حارس منفذاً جديداً ويطلب المتصفح إذن
 الميكروفون من جديد؛ وهذا متوقع.
 
-حارس لا يمنع تشغيل نسخة ثانية منه. إذا شغّلته مرتين، تأخذ النواة الثانية منفذاً آخر ونافذة خاصة بها. أغلق
-الاثنتين وشغّل حارس مرة واحدة.
+تعمل نسخة واحدة فقط من حارس في كل مرة. إذا شغّلته مرة أخرى وهو يعمل، تظهر نافذته الحالية في المقدمة (وتُستعاد
+إن كانت مصغّرة) بدلاً من تشغيل نواة ثانية، ويكتب السجل *"Haris is already running; this second launch brought its
+window to the front and exited."* إذا لم يسمح ويندوز بنقل التركيز، يومض زرها في شريط المهام بدلاً من ذلك. وإذا
+شغّلت حارس وهو ما زال يُغلق (خلال 20 ثانية بعد إغلاق النافذة، أو أثناء إيقاف المحركات)، ينتظر التشغيل الجديد حتى
+ينتهي الإغلاق ثم يفتح نافذة جديدة. وبعد أي توقف مفاجئ لا يبقى شيء يمنع التشغيل التالي.
 
 ## Docker لا يعمل
 
@@ -56,15 +59,18 @@
 2. أغلق حارس وشغّله مرة أخرى. حارس ينتظر Docker نحو دقيقتين عند التشغيل، ولا يشغّل المحركات بعد ذلك من تلقاء
    نفسه.
 
-قد تقترح رسالة خطأ البحث أن تشغّل `docker compose -f search/compose.yaml up -d` بنفسك. هذا الأمر يحتاج سر SearXNG
-الذي يمرره حارس من Credential Manager، لذلك إعادة تشغيل حارس هي الطريقة المضمونة.
+عند فشل البحث في الويب تقول الرسالة *"The local search engine is not running. Start Docker Desktop and wait
+until it says it is running, then close Haris and start it again: Haris starts web search itself."*
+(محرك البحث المحلي لا يعمل: شغّل Docker Desktop وانتظر حتى يعمل، ثم أغلق حارس وشغّله مرة أخرى، فهو يشغّل البحث بنفسه).
+لا تشغّل SearXNG بأمر `docker compose` يدوياً: فهو يحتاج سراً يحفظه حارس في Credential Manager ويمرره فقط
+لأمر `docker compose` الخاص به، لذلك يفشل الأمر المكتوب يدوياً.
 
 ## محركات الصوت تبقى متوقفة
 
 | العَرَض | السبب والحل |
 |---|---|
 | **○ متوقف** لعدة دقائق بعد أول تشغيل على الإطلاق | ‏Docker ينزّل الصور ونموذج الكلام. انتظر؛ والأمر `docker ps` يعرض الحاويات عندما تعمل. |
-| *"The speech-to-text engine is not running. Start it with: docker compose -f voice/compose.yaml up -d"* | ‏Whisper لم يرد. راجع لوحة الصوت، وابحث في السجل عن *"docker compose up -d failed for …"*. إعادة تشغيل حارس تحل المشكلة عادة. |
+| *"The speech-to-text engine is not running. Start Docker Desktop and wait until it says it is running, then close Haris and start it again: Haris starts its voice engines itself."* | ‏Whisper لم يرد. راجع لوحة الصوت، وابحث في السجل عن *"docker compose up -d failed for …"*. إعادة تشغيل حارس تحل المشكلة عادة؛ فهو يختار ملفات compose المناسبة (GPU أو CPU) بنفسه، فلا تشغّل حاويات الصوت يدوياً. |
 | ‏Whisper يتوقف باستمرار بعد أن أغلقت حارس أثناء تنزيل النموذج لأول مرة | يكتشف حارس النموذج نصف المكتوب (*"Unable to open file 'model.bin'"*)، فيحذف المجلد وينزّل من جديد تلقائياً، مرة واحدة. إذا استمرت المشكلة، أغلق حارس وشغّل `docker volume rm haris-voice_whisper-data`، ثم شغّل حارس. |
 | ‏`WHISPER_OFFLINE=true` مع `WHISPER_MODEL` جديد | الوضع غير المتصل يمنع تنزيل النموذج الجديد. اجعل `WHISPER_OFFLINE=false` لتشغيل واحد. |
 | *"Still working on the previous recording. Say it again in a moment."* | حارس يحوّل تسجيلاً واحداً في كل مرة. انتظر الأول. |
@@ -161,7 +167,7 @@
 | *"This model does not support tools, so I can only talk…"* | اختر نموذجاً يدعم الأدوات ([المحركات](engines.md#اختيار-النموذج)). |
 | *"Still working on the previous message."* | طلب واحد في كل مرة؛ انتظر الرد. |
 | *"The core is not responding."* | النواة توقفت. أغلق النافذة وشغّل حارس من جديد. |
-| *"Something went wrong in the core. See the console log."* | راجع `~\.haris\logs\haris.log` (البرنامج المثبّت ليس له نافذة console). |
+| *«حدث خطأ في النواة. التفاصيل في ملف السجل: ⁦%USERPROFILE%\\.haris\\logs\\haris.log⁩»* | خطأ غير متوقع في النواة. افتح ذلك الملف (الصق المسار في مستكشف الملفات)؛ آخر سطوره تذكر الخطأ. نفس المسار يظهر أسفل نافذة الإعدادات. |
 | *"I stopped after 12 steps to stay on the safe side. Ask me to continue if needed."* | الطلب احتاج خطوات أدوات كثيرة. قل «كمّل». |
 | *"This conversation got very long, so I started a fresh one."* | يحدث تلقائياً بعد محادثة طويلة جداً. |
 
