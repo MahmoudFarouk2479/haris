@@ -6,8 +6,9 @@ Website: https://mahmoudfarouk2479.github.io/haris/
 
 A sci-fi holographic assistant for Windows that can actually do things on your PC — open
 apps, manage files, search the web, see your screen, talk and listen — **without trusting the model**.
-Every action goes through a permission gate you control, keys live in the OS vault, and the server
-is unreachable from anything but its own window.
+Every tool call passes a permission gate you control: read-only and low-risk tools run and are logged,
+while anything that opens apps, changes files, touches the clipboard, screen or camera, or powers off
+waits for your click. Keys live in the OS vault, and the server is unreachable from anything but its own window.
 
 Java 21 + Spring Boot core · SVG HUD (English or Arabic) · your choice of brain:
 **Claude**, **Ollama**, **LM Studio**, **any OpenAI-compatible API**, or **Ollama on a free Google Colab GPU**.
@@ -25,7 +26,7 @@ security and privacy, troubleshooting, FAQ, and building from source.
 
 <p align="center">
   <img src="docs/media/approval.gif" width="720" alt="Haris asks before it acts: an approval card, denied by the user" /><br/>
-  <em>Every action goes through a permission gate — here the user denies opening an app.</em>
+  <em>Opening an app waits for a click on the approval card — here the user denies it.</em>
 </p>
 
 | Answers with live tools | Asks before acting | Speaks Egyptian Arabic |
@@ -114,7 +115,7 @@ two minutes; *Run all* again.
 | Script injection in the HUD | Strict CSP (`script-src 'self'`, `connect-src 'self'`), model output rendered as text only. |
 | Leaked API keys | Keys live in Windows Credential Manager; the UI can write them but never read them back. |
 | A "local" engine quietly sending data away | Local engine URLs must be loopback; cloud endpoints must be HTTPS; redirects are never followed. |
-| Running model-written code | Impossible: no shell, no exec, no script tool. Every tool is a fixed operation with validated arguments. |
+| Running model-written code | No tool can run code: there is no shell, exec or script tool. Every tool is a fixed operation with validated arguments. |
 | The model approving its own actions | Approvals come only from a click in the HUD — buttons arm after 0.7 s, Esc and a 2-minute timeout deny. Approvals can't be spoken (a video nearby could say "allow"). |
 | Prompt injection (files, clipboard, web, screenshots) | Marked as outside content. Once it is in the conversation, "allow for session" stops working and every action that sends data out shows the exact data for approval. |
 | Files outside what you chose | `PathGuard`: real-path checks (no `..`, symlink or junction escapes), no UNC or alternate data streams, secrets (`.env`, keys, `.kdbx` …) unreadable. New files can only be text types (`.txt`, `.md`, `.csv`, `.json` …), a rename may not change a file's type, and nothing is created or renamed to a type Windows would run. |

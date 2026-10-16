@@ -2,8 +2,9 @@
 
 **[العربية](../ar/README.md)** · [Project README](../../../README.md)
 
-Haris is a security-first desktop AI assistant for Windows. It talks, listens and acts on your PC,
-and every action that changes something goes through an approval card you control. These guides
+Haris is a security-first desktop AI assistant for Windows. It talks, listens and acts on your PC.
+Read-only and low-risk tools run and are logged; anything that opens apps, changes files, touches the
+clipboard, screen or camera, or powers off goes through an approval card you control. These guides
 cover everything from the first launch to building Haris yourself.
 
 ![The Haris HUD](../../media/01-hud.png)
