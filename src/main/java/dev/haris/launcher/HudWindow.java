@@ -35,7 +35,9 @@ public class HudWindow {
     private static final int SW_RESTORE = 9;
     private static final int SW_SHOWMINIMIZED = 2;
     private static final Set<String> BROWSERS = Set.of("msedge.exe", "chrome.exe");
-    private static final HWND HWND_MESSAGE = new HWND(Pointer.createConstant(-3));
+    /** Parent of message-only windows. Not Pointer.createConstant: that one reaches Windows as an invalid handle. */
+    static final HWND HWND_MESSAGE = new HWND(new Pointer(-3));
+    static final String MESSAGE_CLASS = "Chrome_MessageWindow";
 
     private volatile long pid = -1;
 
@@ -103,15 +105,20 @@ public class HudWindow {
 
     /** The Edge or Chrome process running {@code profile}, or -1. */
     static long profileBrowserPid(Path profile) {
-        HWND message = User32.INSTANCE.FindWindowEx(HWND_MESSAGE, null, "Chrome_MessageWindow", profile.toString());
+        long found = profileOwnerPid(profile);
+        return found > 0 && ProcessHandle.of(found).filter(ProcessHandle::isAlive).map(HudWindow::isBrowser).orElse(false)
+                ? found : -1;
+    }
+
+    /** The process owning the {@code Chrome_MessageWindow} named after {@code profile}, or -1. */
+    static long profileOwnerPid(Path profile) {
+        HWND message = User32.INSTANCE.FindWindowEx(HWND_MESSAGE, null, MESSAGE_CLASS, profile.toString());
         if (message == null) {
             return -1;
         }
         IntByReference owner = new IntByReference();
         User32.INSTANCE.GetWindowThreadProcessId(message, owner);
-        long found = owner.getValue();
-        return found > 0 && ProcessHandle.of(found).filter(ProcessHandle::isAlive).map(HudWindow::isBrowser).orElse(false)
-                ? found : -1;
+        return owner.getValue() > 0 ? owner.getValue() : -1;
     }
 
     /** Alive, started when recorded (to the millisecond) and an Edge or Chrome executable. Unknown means no. */
