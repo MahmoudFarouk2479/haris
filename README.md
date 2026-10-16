@@ -26,6 +26,12 @@ Java 21 + Spring Boot core · SVG HUD (English or Arabic) · your choice of brai
 
 <p align="center"><img src="docs/media/06-voice-mode.png" width="720" alt="Voice mode: hide the conversation, keep the input" /><br/><em>Voice mode: hide the conversation, keep the input</em></p>
 
+<p align="center">
+  <img src="docs/media/arabic.gif" width="720" alt="Haris in Arabic: the interface flips right-to-left and it answers in Egyptian Arabic" /><br/>
+  <em>Arabic interface (right-to-left), questions and spoken answers in Egyptian Arabic.
+  ▶ <a href="docs/media/arabic-demo.mp4">Watch the full Arabic demo with sound (1:08)</a></em>
+</p>
+
 ## Features
 
 | | |

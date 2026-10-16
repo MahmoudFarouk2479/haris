@@ -17,7 +17,13 @@
 
 ![واجهة حارس](docs/media/01-hud.png)
 
-<p align="center"><img src="docs/media/approval.gif" width="720" alt="حارس بيستأذن قبل أي فعل" /></p>
+<p align="center">
+  <img src="docs/media/arabic.gif" width="720" alt="حارس بالعربي: الواجهة من اليمين للشمال وبيرد بالمصري" /><br/>
+  <em>الواجهة بالعربي، وبتسأله بالمصري وبيرد عليك بالكلام والصوت.
+  ▶ <a href="docs/media/arabic-demo.mp4">شوف الديمو العربي كامل بالصوت (1:08)</a></em>
+</p>
+
+<p align="center"><img src="docs/media/approval.gif" width="720" alt="حارس بيستأذن قبل أي فعل" /><br/><em>كل خطوة بإذنك: هنا المستخدم رفض فتح برنامج.</em></p>
 
 <p align="center"><img src="docs/media/06-voice-mode.png" width="720" alt="وضع الصوت: أخفِ المحادثة واترك خانة الكتابة" /><br/><em>وضع الصوت: أخفِ المحادثة واترك خانة الكتابة</em></p>
 
