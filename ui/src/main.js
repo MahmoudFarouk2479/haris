@@ -6,7 +6,7 @@ import '@fontsource/ibm-plex-sans-arabic/400.css';
 import '@fontsource/ibm-plex-sans-arabic/600.css';
 import './styles.css';
 
-import { api, hasToken, streamChat, subscribeEvents } from './api.js';
+import { api, hasToken, stopChat, streamChat, subscribeEvents } from './api.js';
 import { createEmblem } from './emblem.js';
 import { mountDrawers } from './drawers.js';
 import { mountChatPanel } from './chatPanel.js';
@@ -416,11 +416,17 @@ function renderThroughput() {
   $('throughput').textContent = lastThroughput === null ? '—' : t('sys.charsPerSec', { n: lastThroughput });
 }
 
+/** While a reply runs, the Send button is the Stop button. */
+function renderSendButton() {
+  setLabel($('send'), busy ? 'composer.stop' : 'composer.send');
+  $('send').classList.toggle('danger', busy);
+}
+
 async function send(text, { label } = {}) {
   if (busy || !text.trim()) return;
   busy = true;
   if (!label) userHasSpoken = true;
-  $('send').disabled = true;
+  renderSendButton();
   addMessage('user', label ?? text);
   setState('thinking');
 
@@ -484,6 +490,11 @@ async function send(text, { label } = {}) {
       renderThroughput();
       setState(voice.speaking ? 'speaking' : 'idle');
     },
+    stopped: () => {
+      closeBubble();
+      addMessage('notice', t('msg.stopped'));
+      setState('idle');
+    },
     error: (data) => {
       closeBubble();
       addMessage('error', errorText(data));
@@ -495,13 +506,29 @@ async function send(text, { label } = {}) {
   closeBubble();
   closeConfirmation();
   busy = false;
-  $('send').disabled = false;
+  renderSendButton();
   refreshActivity();
   input.focus();
 }
 
+/** The Stop button: the core ends the reply; an open approval counts as denied. */
+function stopReply() {
+  lastInputWasVoice = false;   // no follow-up listening after a stop
+  voice.stopSpeaking();
+  stopChat().catch(() => { /* the reply ends on its own */ });
+}
+
+// While a reply runs the Send button is the Stop button. Enter never stops: only a click does.
+$('send').addEventListener('click', (e) => {
+  if (busy) {
+    e.preventDefault();
+    stopReply();
+  }
+});
+
 $('composer').addEventListener('submit', (e) => {
   e.preventDefault();
+  if (busy) return;
   lastInputWasVoice = false;
   const text = input.value;
   input.value = '';

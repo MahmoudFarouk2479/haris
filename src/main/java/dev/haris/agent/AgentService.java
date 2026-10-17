@@ -55,6 +55,14 @@ public class AgentService {
     private final UndoStack undo;
     private final JsonMapper json;
 
+    // Stop: a flag the loop checks between steps, plus an interrupt for a model call that is
+    // still waiting. The lock keeps the interrupt from landing after the call ends, where it
+    // could cut a running tool short.
+    private final Object callLock = new Object();
+    private volatile boolean running;
+    private volatile boolean stopRequested;
+    private Thread modelCall;
+
     public AgentService(ProviderFactory providers, ConversationService conversations, ToolRegistry tools,
                         ConfirmationBroker confirmations, AuditLog audit, UndoStack undo, JsonMapper json) {
         this.providers = providers;
@@ -64,6 +72,24 @@ public class AgentService {
         this.audit = audit;
         this.undo = undo;
         this.json = json;
+    }
+
+    /**
+     * Ends the current reply: an open approval counts as denied, nothing new runs, and a tool
+     * that is already running finishes. Returns false when nothing was running.
+     */
+    public boolean stop() {
+        if (!running) {
+            return false;
+        }
+        synchronized (callLock) {
+            stopRequested = true;
+            if (modelCall != null) {
+                modelCall.interrupt();
+            }
+        }
+        confirmations.denyAll();
+        return true;
     }
 
     public void run(String userText, AgentListener listener) {
@@ -80,10 +106,11 @@ public class AgentService {
 
         int checkpoint = conversation.size();
         conversation.append(Turn.userText("[" + ZonedDateTime.now().format(STAMP) + "] " + userText));
+        stopRequested = false;
+        running = true;
         try {
             for (int step = 0; step < MAX_STEPS; step++) {
-                ProviderReply reply = provider.complete(conversation.systemPrompt(), conversation.turns(),
-                        tools.specs(), listener::onDelta);
+                ProviderReply reply = ask(provider, conversation, listener);
                 conversation.append(reply.turn());
                 if (reply.notice() != null) {
                     listener.onNotice(reply.notice());
@@ -100,8 +127,10 @@ public class AgentService {
                 }
                 List<Part.ToolResult> results = new ArrayList<>();
                 for (Part.ToolCall call : calls) {
+                    checkStopped();
                     results.add(execute(call, conversation, listener, destination));
                 }
+                checkStopped();
                 conversation.append(Turn.toolResults(results));
             }
             listener.onNotice("I stopped after " + MAX_STEPS + " steps to stay on the safe side. Ask me to continue if needed.");
@@ -109,6 +138,37 @@ public class AgentService {
             // Forget this exchange so the history stays consistent; side effects already happened and are audited.
             conversation.truncate(checkpoint);
             throw e;
+        } finally {
+            running = false;
+        }
+    }
+
+    private ProviderReply ask(ChatProvider provider, Conversation conversation, AgentListener listener) {
+        checkStopped();
+        synchronized (callLock) {
+            modelCall = Thread.currentThread();
+        }
+        try {
+            return provider.complete(conversation.systemPrompt(), conversation.turns(), tools.specs(), delta -> {
+                checkStopped();
+                listener.onDelta(delta);
+            });
+        } catch (AgentStoppedException e) {
+            throw e;
+        } catch (RuntimeException e) {   // an interrupted call surfaces as the provider's own error
+            checkStopped();
+            throw e;
+        } finally {
+            synchronized (callLock) {
+                modelCall = null;
+                Thread.interrupted();   // a late interrupt must not reach the tools
+            }
+        }
+    }
+
+    private void checkStopped() {
+        if (stopRequested) {
+            throw new AgentStoppedException();
         }
     }
 
@@ -221,7 +281,7 @@ public class AgentService {
         }
         boolean offerSession = risk == Risk.CONFIRM && !external && tool.sessionApprovable();
         ConfirmationBroker.Decision d = confirmations.ask(tool.name(), summary, risk, offerSession, external,
-                prettyArgs(input), preview, destination, listener::onConfirm);
+                prettyArgs(input), preview, destination, listener::onConfirm, () -> stopRequested);
         return switch (d) {
             case DENY -> null;
             case ALLOW_ONCE -> "approved";

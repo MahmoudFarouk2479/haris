@@ -80,6 +80,11 @@ export async function streamChat(message, handlers) {
   await readEvents(res, handlers);
 }
 
+/** The Stop button: ends the running reply. Answers { stopped } (false when nothing was running). */
+export async function stopChat() {
+  return api('/api/chat/stop', { method: 'POST' });
+}
+
 /** A long-lived stream of background events (reminders, notifications). Reconnects on its own. */
 export async function subscribeEvents(handlers) {
   for (;;) {

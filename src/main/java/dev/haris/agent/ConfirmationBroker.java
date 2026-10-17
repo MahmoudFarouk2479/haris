@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 import dev.haris.tools.Risk;
@@ -37,12 +38,26 @@ public class ConfirmationBroker {
 
     public Decision ask(String tool, String summary, Risk risk, boolean sessionOption, boolean externalContent,
                         String arguments, String preview, String destination, Consumer<Request> notify) {
+        return ask(tool, summary, risk, sessionOption, externalContent, arguments, preview, destination, notify,
+                () -> false);
+    }
+
+    /**
+     * @param abandoned checked once the request is registered, so a Stop that raced past
+     *                  {@link #denyAll()} still denies it instead of leaving it open for two minutes
+     */
+    public Decision ask(String tool, String summary, Risk risk, boolean sessionOption, boolean externalContent,
+                        String arguments, String preview, String destination, Consumer<Request> notify,
+                        BooleanSupplier abandoned) {
         Request request = new Request(UUID.randomUUID().toString(), tool, summary, risk, sessionOption,
                 externalContent, arguments, preview, destination);
         CompletableFuture<Decision> future = new CompletableFuture<>();
         pending.put(request.id(), future);
         requests.put(request.id(), request);
         try {
+            if (abandoned.getAsBoolean()) {
+                return Decision.DENY;
+            }
             notify.accept(request);
             return future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
         } catch (TimeoutException | ExecutionException e) {

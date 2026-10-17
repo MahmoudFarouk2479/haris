@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import dev.haris.agent.AgentListener;
 import dev.haris.agent.AgentService;
+import dev.haris.agent.AgentStoppedException;
 import dev.haris.agent.ConfirmationBroker;
 import dev.haris.agent.ConversationService;
 import dev.haris.llm.ChatProvider;
@@ -62,6 +63,8 @@ public class ChatController {
             try {
                 agent.run(text, new SseListener(emitter));
                 send(emitter, "done", Map.of());
+            } catch (AgentStoppedException e) {
+                send(emitter, "stopped", Map.of());
             } catch (ProviderException e) {
                 log.warn("Provider error: {}", e.getMessage());
                 send(emitter, "error", Map.of("message", e.getMessage()));
@@ -76,6 +79,12 @@ public class ChatController {
             }
         });
         return ResponseEntity.ok(emitter);
+    }
+
+    /** The Stop button. Answers whether a reply was running. */
+    @PostMapping("/chat/stop")
+    public Map<String, Boolean> stop() {
+        return Map.of("stopped", agent.stop());
     }
 
     @PostMapping("/chat/reset")
