@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability (privately)
+    url: https://github.com/MahmoudFarouk2479/haris/security/advisories/new
+    about: Ways around an approval, data leaving the PC without the promised confirmation, files read outside your folders. Please don't open a public issue for these.
+  - name: Read the guides
+    url: https://github.com/MahmoudFarouk2479/haris/tree/main/docs/guides/en
+    about: Install, engines, voice, settings and troubleshooting. Many problems are answered there.

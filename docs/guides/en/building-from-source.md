@@ -150,6 +150,8 @@ python colab/build_notebook.py
 
 ## Contributing
 
+The short version is below; the full rules are in [CONTRIBUTING.md](../../../CONTRIBUTING.md).
+
 - **Security reports** go through a private advisory, never a public issue: see
   [SECURITY.md](../../../SECURITY.md).
 - **Keep the model untrusted.** No tool may run code, a shell command or an arbitrary program. A new

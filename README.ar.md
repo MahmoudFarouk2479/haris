@@ -97,6 +97,11 @@
 | X | [@Mahmoud44145036](https://x.com/Mahmoud44145036) |
 | Gumroad (منتجاتي التانية، زي Arab Enterprise Kit) | [mahmoudfarouk28.gumroad.com](https://mahmoudfarouk28.gumroad.com/) |
 
+## المساهمة
+
+البلاغات عن المشاكل، وتجارب الموديلات، والـ pull requests كلها مرحّب بيها: شوف [CONTRIBUTING.md](CONTRIBUTING.md) و[قواعد السلوك](CODE_OF_CONDUCT.md).
+الثغرات الأمنية بتتبلّغ عن طريق [SECURITY.md](SECURITY.md)، مش في issue عامة.
+
 ## الرخصة
 
 [MIT](LICENSE). رخص المكوّنات الخارجية في [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

@@ -1,0 +1,36 @@
+name: Feature request
+description: An idea for Haris.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Haris keeps the model untrusted: no shell or script tools, approvals only by a click, nothing listening beyond 127.0.0.1.
+        Ideas that need those to change can't be accepted, but there is often another way. Say what you are trying to do.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The situation, not the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+  - type: dropdown
+    id: risk
+    attributes:
+      label: If it is a new tool, what could it change?
+      options:
+        - Nothing, it only reads (would run and be logged)
+        - Something on the PC (would need a click)
+        - Something hard to undo (would need a click every time)
+        - Not a tool
+  - type: checkboxes
+    id: rules
+    attributes:
+      label: Ground rules
+      options:
+        - label: I understand Haris will not add a tool that runs code or shell commands.
+          required: true

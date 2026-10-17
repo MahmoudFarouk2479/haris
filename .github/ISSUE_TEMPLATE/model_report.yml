@@ -1,0 +1,48 @@
+name: Model report
+description: Tell others how a model works with Haris (tools, Arabic, speed).
+labels: ["engine", "model report"]
+body:
+  - type: markdown
+    attributes:
+      value: These reports feed the local models guide. One model per report, please.
+  - type: dropdown
+    id: engine
+    attributes:
+      label: Engine
+      options: ["Ollama (local)", "LM Studio (local)", "OpenAI-compatible", "Ollama on Google Colab", "Claude"]
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Exact model name
+      placeholder: "qwen3:8b, hf.co/… :Q4_K_M"
+    validations:
+      required: true
+  - type: input
+    id: hardware
+    attributes:
+      label: RAM and GPU
+      placeholder: "16 GB RAM, RTX 3050 4 GB"
+  - type: dropdown
+    id: tools
+    attributes:
+      label: Did tools work? (e.g. "what's my system status?", "open Notepad")
+      options: ["Yes, reliably", "Sometimes", "No: it only talks", "Didn't try"]
+    validations:
+      required: true
+  - type: dropdown
+    id: arabic
+    attributes:
+      label: Arabic quality
+      options: ["Good", "OK", "Poor", "Didn't try"]
+  - type: dropdown
+    id: egyptian
+    attributes:
+      label: Egyptian dialect
+      options: ["Good", "OK", "Poor", "Didn't try"]
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Speed, odd behaviour, prompts that worked well.

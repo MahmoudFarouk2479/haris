@@ -231,6 +231,11 @@ Mahmoud Farouk, from Cairo, Egypt, has 8+ years of experience in software engine
 | X | [@Mahmoud44145036](https://x.com/Mahmoud44145036) |
 | Gumroad (my other products, e.g. Arab Enterprise Kit) | [mahmoudfarouk28.gumroad.com](https://mahmoudfarouk28.gumroad.com/) |
 
+## Contributing
+
+Bug reports, model reports and pull requests are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md) and the
+[code of conduct](CODE_OF_CONDUCT.md). Security problems go through [SECURITY.md](SECURITY.md), never a public issue.
+
 ## License
 
 [MIT](LICENSE). Third-party components and their licenses: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
