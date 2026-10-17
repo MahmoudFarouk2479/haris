@@ -61,7 +61,10 @@ for speech-to-text, spoken replies and web search.
 
 ### Install a release
 
-1. Download `Haris-<version>-windows.zip` from *Releases* and unzip it.
+1. Download `Haris-<version>-windows.zip` from *Releases*. Haris is not code-signed yet: check the
+   file with `Get-FileHash <zip> -Algorithm SHA256` against the SHA-256 in the release notes, then
+   right-click it → *Properties* → *Unblock*, and unzip it
+   ([why Windows may warn you](docs/guides/en/getting-started.md#check-the-file-and-why-windows-may-warn-you)).
 2. Right-click `install.ps1` → *Run with PowerShell* (per user, no admin).
 3. Start **Haris** from the Start menu, open the gear labelled **Settings** and choose an engine.
 
@@ -84,7 +87,7 @@ Both download the wake-word model once (`models/fetch-models.ps1`, SHA-256 check
 | Engine | Setup | Where your conversation goes |
 |---|---|---|
 | **Claude** | Paste an API key from [console.anthropic.com](https://console.anthropic.com). Default `claude-opus-5-5`; *Low* effort is snappiest for voice. | Anthropic |
-| **Ollama / LM Studio** | Install, pull a tool-capable model (e.g. `qwen2.5:7b`), pick it in Settings. | Stays on your PC |
+| **Ollama / LM Studio** | Install, pull a tool-capable model (e.g. `qwen3:8b`; [which one fits your PC](docs/guides/en/local-models.md)), pick it in Settings. | Stays on your PC |
 | **OpenAI-compatible** | Base URL (HTTPS) + API key. | That provider |
 | **Ollama on Colab** | See below. | Your Colab session (Google) |
 
@@ -127,7 +130,8 @@ Risk tiers: **safe** tools run and are logged (`~/.haris/audit.jsonl`); **confir
 (once or for the session); **critical** ones (delete to Recycle Bin, sleep / restart / shut down)
 need a click every time. Restart and shutdown wait 60 s and can be cancelled.
 
-Found a hole? See [SECURITY.md](SECURITY.md).
+The full threat model, mapped to the OWASP Top 10 for Agentic Applications, is in
+[THREAT_MODEL.md](THREAT_MODEL.md). Found a hole? See [SECURITY.md](SECURITY.md).
 
 ## Privacy: what leaves your PC
 
