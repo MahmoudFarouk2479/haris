@@ -507,6 +507,8 @@ html[lang='ar'] .btn { letter-spacing: 0; font-size: 0.85rem; text-transform: no
 .btn:disabled { opacity: 0.4; cursor: wait; }
 .btn.ghost { background: transparent; color: var(--line); border-color: var(--line-dim); }
 .btn.danger { color: var(--danger); border-color: rgba(var(--danger-rgb), 0.55); }
+/* While a reply runs, Send becomes a solid red Stop: readable at a glance, never red-on-teal. */
+#send.danger { background: var(--danger); color: #1a0606; border-color: var(--danger); }
 .mic-btn { padding: 0.45rem 0.7rem; display: grid; place-items: center; }
 .mic-btn.active { color: var(--danger); border-color: var(--danger); animation: blink 0.9s infinite; }
 .drawer .btn { width: 100%; margin-top: 0.6rem; }

@@ -40,3 +40,11 @@ test('the approval tiers are explained in the Security drawer and in Settings, n
   assert.match(STRINGS.en['sec.tiers'], /waits for your click/);
   assert.doesNotMatch(STRINGS.en['sec.tiers'], /every action/i);
 });
+
+test('the Stop button is a solid red button, not red text on the teal Send fill', () => {
+  const css = readFileSync(new URL('./styles.css', import.meta.url), 'utf8');
+  const rule = css.match(/#send\.danger\s*\{([^}]*)\}/)?.[1] ?? '';
+  assert.match(rule, /background:\s*var\(--danger\)/);
+  assert.match(rule, /color:\s*#[0-9a-f]{3,6}/i);
+  assert.match(rule, /border-color:\s*var\(--danger\)/);
+});
