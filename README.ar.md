@@ -51,7 +51,7 @@
 
 **المطلوب:** ويندوز 10 أو 11، و Edge أو Chrome. واختياري [Docker Desktop](https://www.docker.com/products/docker-desktop/) للصوت والبحث.
 
-1. نزّل `Haris-<version>-windows.zip` من *Releases* وفك الضغط.
+1. نزّل `Haris-<version>-windows.zip` من *Releases*. حارس لسه مش موقَّع رقمياً، فقبل ما تفك الضغط اتأكد من الملف بـ `Get-FileHash <zip> -Algorithm SHA256` وقارن الناتج بالـ SHA-256 اللي في ملاحظات الإصدار، وبعدين كليك يمين عليه ← *Properties* ← *Unblock* ([ليه ويندوز ممكن يحذّرك](docs/guides/ar/getting-started.md#تحقّق-من-الملف-ولماذا-قد-يحذّرك-ويندوز)).
 2. كليك يمين على `install.ps1` ← *Run with PowerShell*.
 3. افتح **Haris** من قائمة ابدأ، ومن زرار الترس **الإعدادات** اختار المحرك.
 

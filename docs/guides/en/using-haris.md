@@ -264,6 +264,14 @@ Rules that keep approvals honest:
 - A session approval lasts until the conversation restarts: **Clear**, a settings change, closing
   Haris, or a very long conversation.
 
+### Stopping a reply
+
+While Haris is answering, the **Send** button turns into **Stop**. Click it to end the reply: an
+approval card that is open counts as **Deny**, nothing else runs for that message, and a tool that
+is already running finishes (so a file is never left half-written). Pressing Enter never stops a
+reply; only the button does. The message is then forgotten, and anything that ran before you
+stopped is in the Activity drawer.
+
 ### Outside content
 
 Text Haris did not get from you (files, the clipboard, web pages and search results, screenshots

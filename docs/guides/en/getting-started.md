@@ -29,6 +29,26 @@ The release zip is called `Haris-<version>-windows.zip`. It contains:
 | `uninstall.ps1` | Removes it again. |
 | `haris_colab.ipynb` | The notebook for running the engine on Google Colab (optional, see [Engines](engines.md#ollama-on-google-colab)). |
 
+### Check the file, and why Windows may warn you
+
+Haris is not code-signed yet, so Windows cannot tell who published it. Two steps before you unzip:
+
+1. **Check that the file is the one that was published.** Open PowerShell in the folder with the
+   zip and run:
+   ```powershell
+   Get-FileHash .\Haris-<version>-windows.zip -Algorithm SHA256
+   ```
+   The result must match the SHA-256 in the release notes on the *Releases* page. If it does not
+   match, delete the file and do not run anything from it.
+2. **Unblock it.** Right-click the zip → **Properties** → tick **Unblock** → **OK**. This tells
+   Windows you trust this one download, so the files you unzip are not flagged.
+
+If you skip step 2, Windows may show *Windows protected your PC* the first time you start Haris.
+Choose **More info** → **Run anyway** only after the hash matched. Haris itself never asks for
+administrator rights; if a prompt asks for them while you install Haris, stop.
+
+### Install
+
 1. Unzip the file anywhere, for example in your Downloads folder.
 2. Right-click `install.ps1` → **Run with PowerShell**.
    If PowerShell refuses to run scripts, open PowerShell in that folder and run:

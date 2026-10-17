@@ -283,6 +283,7 @@ td { color: var(--ink); }
   tbody th { width: auto; padding-bottom: 0.2rem; border-bottom: 0; }
   td { padding-top: 0; }
 }
+.table-title { margin: 2.4rem 0 1rem; font-size: 1.15rem; }
 .after-table { color: var(--muted); margin-top: 1.2rem; max-width: var(--measure); }
 
 /* Light on your PC: before/after bars, values always written out. */

@@ -62,10 +62,12 @@ Effort does not change what Haris is allowed to do.
 
 1. Install [Ollama](https://ollama.com) and pull a model that supports tools, for example:
    ```powershell
-   ollama pull qwen2.5:7b
+   ollama pull qwen3:8b
    ```
 2. In Settings choose **Ollama (local)**. The **Ollama URL** is already `http://127.0.0.1:11434`.
 3. Click **Save & detect models**, pick the model in **Model**, and click **Save**.
+
+Which model fits your PC, including Arabic-capable ones: [Fully local in five minutes](local-models.md).
 
 Haris talks to Ollama through its OpenAI-compatible API (`/v1/models`, `/v1/chat/completions`).
 

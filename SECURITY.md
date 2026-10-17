@@ -13,6 +13,8 @@ Please **do not open a public issue** for a vulnerability. Use GitHub's
 
 You should get an answer within a week. Fixes are released before details are published.
 
+What Haris defends against, and what it does not, is written down in [THREAT_MODEL.md](THREAT_MODEL.md).
+
 ## In scope
 
 - Reaching the local server from anything other than the Haris window (other programs, web pages,
