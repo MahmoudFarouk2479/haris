@@ -50,6 +50,7 @@ security and privacy, troubleshooting, FAQ, and building from source.
 | 🎙 **Voice** | "Hey Haris" wake word, push-to-talk, Arabic and English speech, spoken replies sentence by sentence, barge-in, conversation mode. |
 | 👁 **Vision** | One screenshot or one webcam photo, on request. A screenshot is previewed before you approve it; a webcam photo is taken only after you approve, then shown in the conversation. |
 | 🔎 **Private web search** | A local SearXNG instance; pages reduced to text with hidden elements removed. |
+| ⏹ **Stop** | While Haris answers, Send turns into a red Stop: the reply ends, nothing new runs, and a tool already running finishes. |
 | 🔐 **Encrypted memory** | Facts you approve, AES-256-GCM, key in Windows Credential Manager. |
 | 🌅 **Status report & briefing** | On the first launch of the day: a spoken status report (system, engines, weather) with no model call, then an optional briefing with the date, reminders and headlines. |
 | 📦 **Installer** | Self-contained app (its own Java runtime), per-user install, no admin rights. |
