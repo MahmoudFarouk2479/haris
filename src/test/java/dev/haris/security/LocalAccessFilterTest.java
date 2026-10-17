@@ -54,6 +54,16 @@ class LocalAccessFilterTest {
     }
 
     @Test
+    void thePageIsRevalidatedOnEveryLaunchSoAnUpgradeNeverShowsTheOldHud() throws Exception {
+        for (String uri : new String[] {"/", "/index.html", "/mic-worklet.js"}) {
+            assertThat(send(request("GET", uri)).response().getHeader("Cache-Control")).as(uri).isEqualTo("no-cache");
+        }
+        // Hashed bundles change name with every build, so they can be kept for good.
+        assertThat(send(request("GET", "/assets/index-Ci8fgFwu.js")).response().getHeader("Cache-Control"))
+                .isEqualTo("max-age=31536000, immutable");
+    }
+
+    @Test
     void staticFilesWithAPercentInTheQueryStringStillLoad() throws Exception {
         MockHttpServletRequest r = request("GET", "/");
         r.setQueryString("x=%41");

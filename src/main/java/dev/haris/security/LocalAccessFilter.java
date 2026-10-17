@@ -87,6 +87,9 @@ public class LocalAccessFilter extends OncePerRequestFilter {
         }
         if (isStaticFile(request.getMethod(), uri)) {
             setSecurityHeaders(response);
+            // The page is revalidated on every launch so an upgrade never shows the previous HUD;
+            // hashed bundles get a new name with every build, so they can be kept for good.
+            response.setHeader("Cache-Control", STATIC_PAGES.contains(uri) ? "no-cache" : "max-age=31536000, immutable");
             chain.doFilter(request, response);
             return;
         }
