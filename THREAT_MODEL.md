@@ -51,8 +51,8 @@ Manager anyway), and what a cloud provider you chose does with the data you send
 - **Outside content is data.** Tool results that come from outside are wrapped in
   `<external_content>` and marked as data. From then on, "allow for session" is off, and every tool
   that sends data out asks first and shows the exact data.
-- **Stop is always there.** The Stop button ends a reply. An open approval counts as denied,
-  nothing new runs, and a tool that is already running finishes.
+- **Stop is always there.** The Stop button ends a reply: nothing new runs, and a tool that is
+  already running finishes. While an approval card is open, **Deny** (or Esc) declines that action.
 
 ## Risk tiers
 
