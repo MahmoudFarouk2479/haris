@@ -155,7 +155,8 @@ class PermissionGateTest {
         assertThat(screen.delivered).isZero();
         assertThat(listener.asked.getFirst().preview()).startsWith("data:image/jpeg;base64,");
         assertThat(listener.asked.getFirst().sessionOption()).isFalse();
-        assertThat(listener.asked.getFirst().destination()).contains("fake");
+        assertThat(listener.asked.getFirst().destination()).isEqualTo("fake");
+        assertThat(listener.asked.getFirst().localEngine()).isFalse();
         assertThat(screen.lastCapture).containsOnly((byte) 0);   // declined picture wiped from memory
         assertThat(model.lastToolResults().getFirst().jpeg()).isNull();
     }
@@ -268,6 +269,19 @@ class PermissionGateTest {
         assertThat(search.runs).isEqualTo(1);           // ran without asking: nothing outside came in
         assertThat(listener.asked).hasSize(1);
         assertThat(listener.asked.getFirst().tool()).isEqualTo("denied_reader");
+    }
+
+    @Test
+    void theCardNamesTheEngineAndSaysWhetherItIsLocalSoTheHudCanWordItInEitherLanguage() {
+        ProviderFactory local = providersFor(model);
+        when(local.isLocal()).thenReturn(true);
+        agent = new AgentService(local, conversationService(), new ToolRegistry(List.of(confirm)), broker, audit,
+                new UndoStack(audit), json);
+        model.callsThenText("confirm_tool");
+        agent.run("go", listener);
+        ConfirmationBroker.Request asked = listener.asked.getFirst();
+        assertThat(asked.destination()).isEqualTo("fake");
+        assertThat(asked.localEngine()).isTrue();
     }
 
     // ── fakes ─────────────────────────────────────────────────────────────
