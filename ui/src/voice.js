@@ -196,9 +196,20 @@ export class Voice {
 
   // ── Speech output ──────────────────────────────────────────────────────
 
-  /** Queues one sentence; it is fetched (alone or with the ones after it) and played in order. */
+  /** Speaks a whole line now (a greeting, the voice check), without waiting for more text. */
   speak(text) {
     this.speech.push(text);
+    this.speech.flush();
+  }
+
+  /** Queues one sentence of a reply still being written; it is fetched with the ones around it. */
+  speakPart(text) {
+    this.speech.push(text);
+  }
+
+  /** The reply ended or paused for a tool: speak what is waiting. */
+  endSpeech() {
+    this.speech.flush();
   }
 
   async playNext() {

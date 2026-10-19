@@ -436,7 +436,7 @@ async function send(text, { label } = {}) {
   let firstAt = 0;
   let chars = 0;
   voice.stopSpeaking();
-  const speaker = settingsCache?.voiceReplies ? new SentenceSplitter((s) => voice.speak(s)) : null;
+  const speaker = settingsCache?.voiceReplies ? new SentenceSplitter((s) => voice.speakPart(s)) : null;
   const bubble = () => {
     if (!body) {
       body = addMessage('assistant');
@@ -468,6 +468,7 @@ async function send(text, { label } = {}) {
     },
     tool: (tl) => {
       speaker?.flush();
+      voice.endSpeech();
       closeBubble();
       showTool(tl);
       setState(tl.status === 'running' ? 'acting' : 'thinking');
@@ -486,6 +487,7 @@ async function send(text, { label } = {}) {
     image: ({ src }) => showPicture(src),
     done: () => {
       speaker?.flush();
+      voice.endSpeech();
       const secs = (performance.now() - (firstAt || started)) / 1000;
       lastThroughput = chars && secs > 0 ? Math.round(chars / secs) : null;
       renderThroughput();
