@@ -18,6 +18,7 @@ import { KEY_SLOTS, removeKey } from './secretKeys.js';
 import { SentenceSplitter, Voice } from './voice.js';
 import { takePhoto } from './camera.js';
 import { setBidiText } from './bidi.js';
+import { localizeSummary } from './summaries.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -376,7 +377,7 @@ function showTool({ id, tool, summary, status, detail }) {
   }
   const icon = { running: '⟳', done: '✓', denied: '✕', error: '!' }[status] ?? '·';
   line.dataset.status = status;
-  line.textContent = `${icon} ${toolLabel(tool).toUpperCase()} · ${summary}${detail ? ' — ' + detail : ''}`;
+  line.textContent = `${icon} ${toolLabel(tool).toUpperCase()} · ${localizeSummary(summary, getLanguage())}${detail ? ' — ' + detail : ''}`;
   scrollDown();
 }
 
@@ -570,14 +571,15 @@ function askConfirmation(request) {
   $('confirm-risk').textContent = risk === 'CRITICAL' ? t('confirm.critical') : t('confirm.risk');
   confirmDialog.dataset.risk = risk;
   $('confirm-tool').textContent = `${toolLabel(request.tool).toUpperCase()} · ${request.tool}`;
-  $('confirm-summary').textContent = request.summary;
+  $('confirm-summary').textContent = localizeSummary(request.summary, getLanguage());
   $('confirm-args').textContent = request.arguments;
   $('confirm-warning').hidden = !request.externalContent;
   const preview = request.preview?.startsWith('data:image/jpeg;base64,') ? request.preview : null;
   $('confirm-preview-box').hidden = !preview;
   $('confirm-preview').src = preview ?? '';
-  $('confirm-destination').textContent = request.destination ? t('confirm.destination', { where: request.destination }) : '';
-  $('confirm-destination').classList.toggle('cloud', /internet/.test(request.destination ?? ''));
+  $('confirm-destination').textContent = request.destination
+    ? t(request.localEngine ? 'confirm.destLocal' : 'confirm.destCloud', { label: request.destination }) : '';
+  $('confirm-destination').classList.toggle('cloud', !request.localEngine);
   $('confirm-session').hidden = !request.sessionOption;
 
   const armed = [$('confirm-once'), $('confirm-session')];

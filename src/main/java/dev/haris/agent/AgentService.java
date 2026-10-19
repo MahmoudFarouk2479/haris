@@ -99,8 +99,8 @@ public class AgentService {
         }
         Conversation conversation = conversations.current();
         ChatProvider provider = providers.current();
-        String destination = provider.label() + (providers.isLocal()
-                ? " — stays on this computer" : " — sent over the internet to the provider's servers");
+        String destination = provider.label();
+        boolean localEngine = providers.isLocal();
         listener.onMeta(provider.label());
         listener.onSecurity(conversation.hasExternalContent());
 
@@ -128,7 +128,7 @@ public class AgentService {
                 List<Part.ToolResult> results = new ArrayList<>();
                 for (Part.ToolCall call : calls) {
                     checkStopped();
-                    results.add(execute(call, conversation, listener, destination));
+                    results.add(execute(call, conversation, listener, destination, localEngine));
                 }
                 checkStopped();
                 conversation.append(Turn.toolResults(results));
@@ -173,7 +173,7 @@ public class AgentService {
     }
 
     private Part.ToolResult execute(Part.ToolCall call, Conversation conversation, AgentListener listener,
-                                    String destination) {
+                                    String destination, boolean localEngine) {
         Optional<Tool> found = tools.find(call.name());
         if (found.isEmpty()) {
             audit.record(call.name(), "unknown tool", Risk.CRITICAL, "rejected", "unknown tool");
@@ -210,7 +210,7 @@ public class AgentService {
         }
 
         String preview = capture == null ? null : dataUrl(capture.jpeg());
-        String decision = decide(tool, input, summary, risk, conversation, listener, preview, destination);
+        String decision = decide(tool, input, summary, risk, conversation, listener, preview, destination, localEngine);
         if (decision == null) {
             if (capture != null) {
                 java.util.Arrays.fill(capture.jpeg(), (byte) 0);   // the declined picture is wiped
@@ -267,7 +267,8 @@ public class AgentService {
 
     /** Returns how the action was authorised, or null if it was not. */
     private String decide(Tool tool, JsonNode input, String summary, Risk risk,
-                          Conversation conversation, AgentListener listener, String preview, String destination) {
+                          Conversation conversation, AgentListener listener, String preview, String destination,
+                          boolean localEngine) {
         boolean external = conversation.hasExternalContent();
         // Outside content may carry instructions to leak data through a query, link or message:
         // from then on, anything that sends arguments off the machine is shown to the user first.
@@ -281,7 +282,7 @@ public class AgentService {
         }
         boolean offerSession = risk == Risk.CONFIRM && !external && tool.sessionApprovable();
         ConfirmationBroker.Decision d = confirmations.ask(tool.name(), summary, risk, offerSession, external,
-                prettyArgs(input), preview, destination, listener::onConfirm, () -> stopRequested);
+                prettyArgs(input), preview, destination, localEngine, listener::onConfirm, () -> stopRequested);
         return switch (d) {
             case DENY -> null;
             case ALLOW_ONCE -> "approved";

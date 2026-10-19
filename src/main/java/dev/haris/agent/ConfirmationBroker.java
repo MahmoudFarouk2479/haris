@@ -25,11 +25,12 @@ public class ConfirmationBroker {
 
     /**
      * @param preview     a data: URL of the exact picture that will be shared, or null
-     * @param destination where the result goes (e.g. "Claude · claude-opus-5-5 — Anthropic's servers")
+     * @param destination the engine the result goes to (e.g. "Claude · claude-opus-5-5")
+     * @param localEngine whether that engine runs on this computer; the HUD words the line in its own language
      */
     public record Request(String id, String tool, String summary, Risk risk,
                           boolean sessionOption, boolean externalContent, String arguments,
-                          String preview, String destination) {}
+                          String preview, String destination, boolean localEngine) {}
 
     private static final long TIMEOUT_SECONDS = 120;
 
@@ -37,9 +38,10 @@ public class ConfirmationBroker {
     private final Map<String, Request> requests = new ConcurrentHashMap<>();
 
     public Decision ask(String tool, String summary, Risk risk, boolean sessionOption, boolean externalContent,
-                        String arguments, String preview, String destination, Consumer<Request> notify) {
-        return ask(tool, summary, risk, sessionOption, externalContent, arguments, preview, destination, notify,
-                () -> false);
+                        String arguments, String preview, String destination, boolean localEngine,
+                        Consumer<Request> notify) {
+        return ask(tool, summary, risk, sessionOption, externalContent, arguments, preview, destination, localEngine,
+                notify, () -> false);
     }
 
     /**
@@ -47,10 +49,10 @@ public class ConfirmationBroker {
      *                  {@link #denyAll()} still denies it instead of leaving it open for two minutes
      */
     public Decision ask(String tool, String summary, Risk risk, boolean sessionOption, boolean externalContent,
-                        String arguments, String preview, String destination, Consumer<Request> notify,
-                        BooleanSupplier abandoned) {
+                        String arguments, String preview, String destination, boolean localEngine,
+                        Consumer<Request> notify, BooleanSupplier abandoned) {
         Request request = new Request(UUID.randomUUID().toString(), tool, summary, risk, sessionOption,
-                externalContent, arguments, preview, destination);
+                externalContent, arguments, preview, destination, localEngine);
         CompletableFuture<Decision> future = new CompletableFuture<>();
         pending.put(request.id(), future);
         requests.put(request.id(), request);
