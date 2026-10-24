@@ -377,7 +377,9 @@ function showTool({ id, tool, summary, status, detail }) {
   }
   const icon = { running: '⟳', done: '✓', denied: '✕', error: '!' }[status] ?? '·';
   line.dataset.status = status;
-  line.textContent = `${icon} ${toolLabel(tool).toUpperCase()} · ${localizeSummary(summary, getLanguage())}${detail ? ' — ' + detail : ''}`;
+  // The summary already starts with the action ("Open app: Notepad"), so the tool name is only a fallback.
+  const what = localizeSummary(summary, getLanguage()) || toolLabel(tool);
+  line.textContent = `${icon} ${what}${detail ? ' — ' + detail : ''}`;
   scrollDown();
 }
 

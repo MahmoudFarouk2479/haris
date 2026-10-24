@@ -64,6 +64,13 @@ test('arguments are never translated: paths, links and quoted text pass through 
   assert.equal(localizeSummary('Copy to clipboard: "Open app: Notepad"', 'ar'), 'نسخ إلى الحافظة: «Open app: Notepad»');
 });
 
+test('a tool line names the action once: the summary, or the tool name when there is no summary', () => {
+  const main = readFileSync(new URL('./main.js', import.meta.url), 'utf8');
+  const showTool = main.slice(main.indexOf('function showTool('), main.indexOf('function scrollDown('));
+  assert.doesNotMatch(showTool, /toolLabel\(tool\)\.toUpperCase\(\)\} · /);
+  assert.match(showTool, /localizeSummary\(summary, getLanguage\(\)\) \|\| toolLabel\(tool\)/);
+});
+
 test('the approval card and the tool lines show the localized summary and destination', () => {
   const main = readFileSync(new URL('./main.js', import.meta.url), 'utf8');
   assert.match(main, /\$\('confirm-summary'\)\.textContent = localizeSummary\(request\.summary, getLanguage\(\)\)/);
