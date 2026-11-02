@@ -239,5 +239,7 @@ Bug reports, model reports and pull requests are welcome: see [CONTRIBUTING.md](
 
 ## License
 
-[MIT](LICENSE). Third-party components and their licenses: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+[MIT](LICENSE). Copyright (c) 2026 TENMATECH Digital Solutions L.L.C. Created and maintained by Mahmoud Farouk.
+
+Third-party components and their licenses: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 

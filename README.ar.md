@@ -105,7 +105,9 @@
 
 ## الرخصة
 
-[MIT](LICENSE). رخص المكوّنات الخارجية في [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+[MIT](LICENSE). حقوق النشر © 2026 شركة تينماتك للحلول الرقمية ذ.م.م (TENMATECH Digital Solutions L.L.C.). من تطوير محمود فاروق.
+
+رخص المكوّنات الخارجية في [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 
 </div>
