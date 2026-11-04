@@ -15,7 +15,7 @@ cover everything from the first launch to building Haris yourself.
 |---|---|
 | [Getting started](getting-started.md) | Requirements, installing the release zip, the first launch, choosing an engine, your first conversation, uninstalling. |
 | [Engines](engines.md) | Claude, Ollama, LM Studio, OpenAI-compatible clouds and Ollama on Google Colab: setup, where your data goes, model tips, the effort setting. |
-| [Fully local in five minutes](local-models.md) | Ollama setup, which tool-capable model fits your RAM, and Arabic-capable local models. |
+| [Fully local with Ollama](local-models.md) | Ollama setup, which tool-capable model fits your RAM, and Arabic-capable local models. |
 | [Voice](voice.md) | Docker setup, "Hey Haris", push-to-talk, conversation mode, languages, Piper and Gemini voices, NVIDIA GPU speech-to-text, what speed to expect. |
 | [Using Haris](using-haris.md) | A tour of the HUD, everything you can ask, how approvals work, the daily status report and briefing, keyboard shortcuts. |
 | [Settings](settings.md) | Every field in the Settings dialog: what it does, its default and its valid values. |

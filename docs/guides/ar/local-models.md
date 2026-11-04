@@ -1,4 +1,4 @@
-# تشغيل محلي بالكامل في خمس دقائق (Ollama)
+# تشغيل محلي بالكامل مع Ollama
 
 **[English](../en/local-models.md)** · [كل الأدلة](README.md)
 

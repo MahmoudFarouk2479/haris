@@ -1,4 +1,4 @@
-# Fully local in five minutes (Ollama)
+# Fully local with Ollama
 
 **[العربية](../ar/local-models.md)** · [All guides](README.md)
 
