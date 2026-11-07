@@ -67,6 +67,8 @@ for speech-to-text, spoken replies and web search.
    right-click it → *Properties* → *Unblock*, and unzip it
    ([why Windows may warn you](docs/guides/en/getting-started.md#check-the-file-and-why-windows-may-warn-you)).
 2. Right-click `install.ps1` → *Run with PowerShell* (per user, no admin).
+   If PowerShell says the script "is not digitally signed", run this in the unzipped folder instead:
+   `powershell -ExecutionPolicy Bypass -File .\install.ps1` (it applies to this one run only).
 3. Start **Haris** from the Start menu, open the gear labelled **Settings** and choose an engine.
 
 `uninstall.ps1` removes the app; `uninstall.ps1 -RemoveData` also erases settings, memory, stored
